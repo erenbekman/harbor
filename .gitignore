@@ -1,0 +1,5 @@
+.build/
+AppIcon.iconset/
+AppIcon.icns
+Harbor.app/
+.DS_Store
