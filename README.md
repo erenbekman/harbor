@@ -122,6 +122,26 @@ changed.
 Nothing is stored in your projects. Project and service definitions live in
 `~/Library/Application Support/Harbor/projects.json`.
 
+## Updates
+
+Harbor updates itself. Settings → About shows the installed version and checks the
+latest GitHub release; when a newer one exists the button becomes **Update to x.y.z** —
+it downloads the release, swaps the bundle and relaunches. It also checks quietly at
+launch, and an available update shows up in the menu bar item.
+
+Your services are untouched by an update: they live in tmux, not in the app.
+
+Cutting a release:
+
+```bash
+# bump VERSION, then
+./dist.sh
+gh release create v$(cat VERSION) Harbor.zip --title "Harbor v$(cat VERSION)" --notes "…"
+```
+
+The contract the updater relies on: the tag is `v<VERSION>` and the release ships an
+asset named exactly `Harbor.zip`.
+
 ## Build from source
 
 ```bash

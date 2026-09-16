@@ -9,6 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var window: NSWindow?
     private var statusItem: NSStatusItem?
     private var palette: PaletteWindow?
+    private var settings: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         Tmux.ensureConfig()
@@ -20,6 +21,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         runner.startAutoServices()
         HotKey.register()
         HotKey.onPress = { [weak self] in self?.togglePalette(nil) }
+        Updater.shared.check(silent: true)
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
@@ -94,6 +96,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         palette = nil
     }
 
+    @objc func showSettings(_ sender: Any?) {
+        if let settings {
+            settings.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 640, height: 420),
+                              styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        window.title = "Settings"
+        window.isReleasedWhenClosed = false
+        window.contentView = NSHostingView(rootView: SettingsView())
+        window.center()
+        settings = window
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    @objc func checkForUpdates(_ sender: Any?) {
+        Updater.shared.check()
+        showSettings(nil)
+    }
+
     @objc private func toggleLoginItem() {
         do {
             if SMAppService.mainApp.status == .enabled {
@@ -164,6 +188,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         login.target = self
         login.state = SMAppService.mainApp.status == .enabled ? .on : .off
         menu.addItem(login)
+        if let version = Updater.shared.availableVersion {
+            let update = NSMenuItem(title: "Update to \(version)…", action: #selector(checkForUpdates(_:)),
+                                    keyEquivalent: "")
+            update.target = self
+            menu.addItem(update)
+        }
+        let settingsItem = NSMenuItem(title: "Settings…", action: #selector(showSettings(_:)), keyEquivalent: "")
+        settingsItem.target = self
+        menu.addItem(settingsItem)
         menu.addItem(NSMenuItem(title: "Quit Harbor", action: #selector(NSApplication.terminate(_:)),
                                 keyEquivalent: "q"))
     }
@@ -198,8 +231,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         let appItem = NSMenuItem()
         let appMenu = NSMenu()
-        appMenu.addItem(withTitle: "About Harbor",
-                        action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+        let about = NSMenuItem(title: "About Harbor", action: #selector(showSettings(_:)), keyEquivalent: "")
+        about.target = self
+        appMenu.addItem(about)
+        let updates = NSMenuItem(title: "Check for Updates…", action: #selector(checkForUpdates(_:)),
+                                 keyEquivalent: "")
+        updates.target = self
+        appMenu.addItem(updates)
+        appMenu.addItem(.separator())
+        let settingsMenuItem = NSMenuItem(title: "Settings…", action: #selector(showSettings(_:)),
+                                          keyEquivalent: ",")
+        settingsMenuItem.target = self
+        appMenu.addItem(settingsMenuItem)
         appMenu.addItem(.separator())
         let openItem = NSMenuItem(title: "Open Harbor", action: #selector(showWindow(_:)), keyEquivalent: "0")
         openItem.target = self

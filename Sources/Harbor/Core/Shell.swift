@@ -75,6 +75,16 @@ enum Shell {
         try? p.run()
     }
 
+    /// Fire and forget, through a shell — the caller is usually about to quit.
+    static func runDetached(shell command: String) {
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/bin/zsh")
+        p.arguments = ["-c", command]
+        p.standardOutput = FileHandle.nullDevice
+        p.standardError = FileHandle.nullDevice
+        try? p.run()
+    }
+
     /// pid → parent pid for every process on the machine, in one fork.
     static func processTree() -> [Int32: Int32] {
         let r = run("/bin/ps", ["-axo", "pid=,ppid="])

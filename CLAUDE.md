@@ -13,9 +13,13 @@ half of it.
 swift build      # fast compile check
 ./build.sh       # release build + Harbor.app
 ./install.sh     # build + install into /Applications + launch
+./dist.sh        # release artifact: Harbor.zip (the asset name the updater expects)
 ```
 
-`VERSION` is read by `build.sh` for the bundle version.
+Release flow: bump `VERSION` → `./dist.sh` → commit and push →
+`gh release create v<VERSION> Harbor.zip --title "Harbor v<VERSION>" --notes "…"`.
+`VERSION` is the single source of truth — `build.sh` and `dist.sh` both read it, and
+`Updater` compares the installed `CFBundleShortVersionString` against the tag.
 
 ## Layout
 
@@ -33,6 +37,7 @@ Sources/Harbor/
 │   ├── Runner.swift    # start/stop, the 2 s poll, health, crashes, restarts
 │   ├── Terminals.swift # attach in a terminal, open in an editor, free a port
 │   ├── Notify.swift    # osascript notifications
+│   ├── Updater.swift   # GitHub release self-updater
 │   └── HotKey.swift    # the global ⌃⌘H
 └── Views/              # RootView (rail), ServicesPanel (rows + log), Sheets,
                         # Palette (the quick switcher)
@@ -86,6 +91,10 @@ Sources/Harbor/
   would need the Accessibility permission for the same keystroke. The palette is an
   `NSPanel` subclass overriding `canBecomeKey` — a borderless panel takes no keystrokes
   otherwise, and a switcher that cannot be typed into is decoration.
+- **A running bundle cannot overwrite itself.** The updater unpacks the download, then
+  hands the swap to a detached shell script (`rm -rf`, `ditto`, `xattr -cr`, `open`) and
+  quits — the script outlives the app it is replacing. Services are in tmux, so an
+  update never touches them.
 - **Closing the window does not quit the app** (menu bar item stays), and quitting does
   NOT stop services — that is the entire point of running them in tmux.
 
