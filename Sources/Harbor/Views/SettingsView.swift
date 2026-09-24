@@ -10,6 +10,7 @@ struct SettingsView: View {
         var icon: String { self == .general ? "gearshape" : "info.circle" }
     }
 
+    @ObservedObject var strip: Strip
     @State private var section: Section = .general
 
     var body: some View {
@@ -44,7 +45,7 @@ struct SettingsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     switch section {
-                    case .general: GeneralPane()
+                    case .general: GeneralPane(strip: strip)
                     case .about: AboutPane()
                     }
                 }
@@ -58,12 +59,24 @@ struct SettingsView: View {
 }
 
 private struct GeneralPane: View {
+    @ObservedObject var strip: Strip
     @State private var openAtLogin = SMAppService.mainApp.status == .enabled
     @State private var error: String?
 
     var body: some View {
         Text("General")
             .font(.system(size: 17, weight: .semibold))
+
+        card {
+            Toggle("Edge strip", isOn: Binding(
+                get: { strip.installed },
+                set: { strip.setEnabled($0) }
+            ))
+            Text("A column of project chips on the right edge of the screen, above every app. Hover it to see each project's services and start or stop them; drag it to move it up or down.")
+                .font(.system(size: 11))
+                .foregroundStyle(Theme.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
 
         card {
             Toggle("Open Harbor at login", isOn: $openAtLogin)

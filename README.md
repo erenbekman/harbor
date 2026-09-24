@@ -12,7 +12,21 @@ output.
 Services run inside **tmux**, so they outlive the app: quit Harbor and your dev server
 keeps serving. Open it again and it is still there, still green, still on `:3000`.
 
+Most of the time you never open the window at all: a column of project chips sits on
+the right edge of the screen, above whatever you are working in, and opens under the
+pointer.
+
 ```
+                                        ┌──┐        ┌──────────────────────┐
+                                        │N │        │ ──                   │
+   the edge strip, closed  ─────────────│Ü │  hover │ ● nott             ⌄ │
+                                        │A │  ────► │   ▶ dev              │
+                                        └──┘        │     stopped          │
+                                                    │ ● üstad            ⌄ │
+                                                    │   ■ serve            │
+                                                    │     running · :8000  │
+                                                    └──────────────────────┘
+
 ┌──────────────┬──────────────────────────────────────────────┐
 │ ● nott       │  nott                    ▶ Start all  ■ Stop  │
 │ ● üstad   ●2 │  ~/Documents/GitHub/nott                      │
@@ -75,6 +89,14 @@ Free port`.
 **Health checks.** An open port is not the same as an app that answers. Give a service
 `/health` (or a whole URL) and the dot only turns green once that URL responds;
 until then it stays yellow, which is the truth while a framework is still booting.
+
+**The edge strip.** A 44pt column of project chips docked to the right edge of the
+screen, above every app and on every Space. A chip fills with the project's color when
+something in it is running. Hover it and it widens into the full list — every project
+with its services, each with a start/stop button, its status and its port. It is a
+non-activating panel, so pressing play does not pull focus away from your editor.
+Drag it up or down to park it where you like; ⌘-click a project name to open it in the
+window. Turn it off in Settings → General or in the menu bar item.
 
 **Quick switcher.** `⌃⌘H` from anywhere, `⌘K` inside the app. Type a project or
 service name, `Enter` starts or stops it. No window, no mouse.

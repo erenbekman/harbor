@@ -91,6 +91,26 @@ Sources/Harbor/
   would need the Accessibility permission for the same keystroke. The palette is an
   `NSPanel` subclass overriding `canBecomeKey` — a borderless panel takes no keystrokes
   otherwise, and a switcher that cannot be typed into is decoration.
+- **The strip belongs to no window**, which is the point: you look at it while you are
+  in the editor. A borderless `nonactivatingPanel` at `.statusBar` level with
+  `canJoinAllSpaces`, so pressing play never pulls focus out of the app in front.
+  Four things it cannot do without:
+  `acceptsFirstMouse` is overridden on the hosting view, or the first click on a row is
+  spent trying to activate a panel that cannot be activated;
+  hover is an `NSTrackingArea` with **`.activeAlways`**, never SwiftUI's `onHover` —
+  the panel is never key, and the only time the strip matters is when another
+  application is in front;
+  row heights are ARITHMETIC constants (`Strip.rowHeight`, `serviceHeight`, `gripHeight`),
+  because AppKit animates the WINDOW FRAME and has to know the total before SwiftUI lays
+  anything out;
+  and the position is stored as a FRACTION of the screen (`stripCenter`), not a point —
+  the panel changes height every time it opens, and a stored y would make it drift.
+- **Closed it shows chips, not a sliver.** It was 6pt wide and technically visible;
+  nobody aims at 6pt, and it said nothing about what was running. A 44pt column of the
+  same chips the window's rail uses is a target and a status display at once.
+- **Open, everything is listed.** Clicking a project to reveal its services made the
+  strip a menu; the reason to look at it is to see what is running. The chevron now
+  FOLDS a project away instead, and a folded project stays folded.
 - **A running bundle cannot overwrite itself.** The updater unpacks the download, then
   hands the swap to a detached shell script (`rm -rf`, `ditto`, `xattr -cr`, `open`) and
   quits — the script outlives the app it is replacing. Services are in tmux, so an

@@ -10,6 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusItem: NSStatusItem?
     private var palette: PaletteWindow?
     private var settings: NSWindow?
+    private lazy var strip = Strip(store: store, runner: runner)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         Tmux.ensureConfig()
@@ -22,6 +23,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         HotKey.register()
         HotKey.onPress = { [weak self] in self?.togglePalette(nil) }
         Updater.shared.check(silent: true)
+        strip.onOpenProject = { [weak self] project in
+            self?.store.selection = project.id
+            self?.showWindow(nil)
+        }
+        if Strip.isEnabled { strip.install() }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
@@ -96,6 +102,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         palette = nil
     }
 
+    @objc func toggleStrip(_ sender: Any?) {
+        strip.setEnabled(!strip.installed)
+    }
+
     @objc func showSettings(_ sender: Any?) {
         if let settings {
             settings.makeKeyAndOrderFront(nil)
@@ -106,7 +116,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                               styleMask: [.titled, .closable], backing: .buffered, defer: false)
         window.title = "Settings"
         window.isReleasedWhenClosed = false
-        window.contentView = NSHostingView(rootView: SettingsView())
+        window.contentView = NSHostingView(rootView: SettingsView(strip: strip))
         window.center()
         settings = window
         window.makeKeyAndOrderFront(nil)
@@ -194,6 +204,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             update.target = self
             menu.addItem(update)
         }
+        let stripItem = NSMenuItem(title: "Edge Strip", action: #selector(toggleStrip(_:)), keyEquivalent: "")
+        stripItem.target = self
+        stripItem.state = strip.installed ? .on : .off
+        menu.addItem(stripItem)
         let settingsItem = NSMenuItem(title: "Settings…", action: #selector(showSettings(_:)), keyEquivalent: "")
         settingsItem.target = self
         menu.addItem(settingsItem)
