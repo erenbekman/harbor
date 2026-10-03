@@ -8,16 +8,19 @@ import SwiftUI
 /// reaches it.
 @MainActor
 final class Strip: ObservableObject {
-    static let width: CGFloat = 200
+    /// The card floats clear of the screen edge; the WINDOW still reaches it, so
+    /// the pointer thrown at the edge opens the strip.
+    static let edgeInset: CGFloat = 10
+    static let width: CGFloat = 222
     /// Closed, the strip is a column of project chips: a 6pt line was easy to
     /// miss and impossible to aim at.
-    static let closedWidth: CGFloat = 44
-    static let chipSize: CGFloat = 30
-    static let chipSpacing: CGFloat = 7
-    static let rowHeight: CGFloat = 30
-    static let serviceHeight: CGFloat = 32
-    static let padding: CGFloat = 8
-    static let gripHeight: CGFloat = 13
+    static let closedWidth: CGFloat = 58
+    static let chipSize: CGFloat = 34
+    static let chipSpacing: CGFloat = 8
+    static let rowHeight: CGFloat = 32
+    static let serviceHeight: CGFloat = 36
+    static let padding: CGFloat = 10
+    static let gripHeight: CGFloat = 14
 
     @Published private(set) var installed = false
     @Published private(set) var open = false
@@ -73,7 +76,10 @@ final class Strip: ObservableObject {
         panel.contentView = container
         panel.isOpaque = false
         panel.backgroundColor = .clear
-        panel.hasShadow = true
+        // The window is wider than the card it draws, and AppKit's own shadow is
+        // computed from the window's alpha ONCE — it goes stale on every resize,
+        // and this panel resizes every time it opens. SwiftUI draws it instead.
+        panel.hasShadow = false
         panel.level = .statusBar
         panel.isMovable = false
         panel.hidesOnDeactivate = false

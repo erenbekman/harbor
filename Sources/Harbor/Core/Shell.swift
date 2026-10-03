@@ -59,6 +59,7 @@ enum Shell {
         let pipe = Pipe()
         p.standardOutput = pipe
         p.standardError = pipe
+        p.standardInput = FileHandle.nullDevice
         let done = barrier(for: p)
         do { try p.run() } catch { return (-1, "\(error)") }
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
@@ -73,6 +74,46 @@ enum Shell {
         p.standardOutput = FileHandle.nullDevice
         p.standardError = FileHandle.nullDevice
         try? p.run()
+    }
+
+    /// Like `run`, but a process that never exits cannot hold the caller forever.
+    /// The pipe is drained on its own queue — waiting first with a full pipe is
+    /// how a child blocks and the timeout becomes the only way out.
+    static func run(_ launchPath: String, _ args: [String], timeout: TimeInterval,
+                    env: [String: String]? = nil) -> (status: Int32, output: String) {
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: launchPath)
+        p.arguments = args
+        var merged = ProcessInfo.processInfo.environment
+        merged["PATH"] = userPath
+        for (k, v) in env ?? [:] { merged[k] = v }
+        p.environment = merged
+
+        let pipe = Pipe()
+        p.standardOutput = pipe
+        p.standardError = pipe
+        // A GUI process's stdin never reaches EOF, and a child that waits on it
+        // then waits forever — which is exactly how `claude -p` hung.
+        p.standardInput = FileHandle.nullDevice
+        let done = DispatchSemaphore(value: 0)
+        p.terminationHandler = { _ in done.signal() }
+
+        let reader = DispatchQueue(label: "harbor.shell.read")
+        let box = OutputBox()
+        let handle = pipe.fileHandleForReading
+        reader.async { box.data = handle.readDataToEndOfFile() }
+
+        do { try p.run() } catch { return (-1, "\(error)") }
+        if done.wait(timeout: .now() + timeout) == .timedOut {
+            p.terminate()
+            return (-2, "")
+        }
+        reader.sync {}
+        return (p.terminationStatus, String(data: box.data, encoding: .utf8) ?? "")
+    }
+
+    private final class OutputBox: @unchecked Sendable {
+        var data = Data()
     }
 
     /// Fire and forget, through a shell — the caller is usually about to quit.

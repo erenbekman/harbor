@@ -38,6 +38,7 @@ Sources/Harbor/
 │   ├── Terminals.swift # attach in a terminal, open in an editor, free a port
 │   ├── Notify.swift    # osascript notifications
 │   ├── Updater.swift   # GitHub release self-updater
+│   ├── Magic.swift     # "what does this project run?", asked of claude -p
 │   └── HotKey.swift    # the global ⌃⌘H
 └── Views/              # RootView (rail), ServicesPanel (rows + log), Sheets,
                         # Palette (the quick switcher)
@@ -91,6 +92,21 @@ Sources/Harbor/
   would need the Accessibility permission for the same keystroke. The palette is an
   `NSPanel` subclass overriding `canBecomeKey` — a borderless panel takes no keystrokes
   otherwise, and a switcher that cannot be typed into is decoration.
+- **Magic is READ-ONLY and does not write the answer anywhere.** `claude -p` runs with
+  `--allowedTools Read,Glob,Grep`, and what comes back is a proposal the user ticks.
+  Claude Studio let Claude write `services.json` itself; here a wrong command that
+  appears in the sidebar on its own is worse than a missing one, and the file it would
+  write is the app's global store, not something inside the project.
+- **A child that waits on stdin waits forever.** A GUI process's stdin never reaches
+  EOF, so `claude -p` sat there until the timeout — the CLI even says so ("no stdin data
+  received in 3s") where a terminal is attached, and from the app there is no terminal
+  to say it to. `Shell.run` hands every child `FileHandle.nullDevice`. The same call is
+  `zsh -l` and NOT `-l -i`: without a tty an interactive zsh prints "can't change
+  option: zle" into the output, and the PATH it was wanted for is injected already.
+- **The CLI's own output is not the answer.** `--output-format json` wraps it, a warning
+  line may precede it, and the model's JSON may arrive inside a code fence — so the JSON
+  is CUT OUT of stdout (first `{` to last `}`), unwrapped once through `result`, and cut
+  out again. Anything less broke on the first warning line.
 - **The strip belongs to no window**, which is the point: you look at it while you are
   in the editor. A borderless `nonactivatingPanel` at `.statusBar` level with
   `canJoinAllSpaces`, so pressing play never pulls focus out of the app in front.

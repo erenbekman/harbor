@@ -66,6 +66,23 @@ your lockfile: npm, pnpm, yarn or bun), Laravel's `artisan serve` plus Horizon o
 queue worker, Django's `runserver`, `docker compose up`. You tick the ones you want;
 nothing is added behind your back.
 
+**Magic.** For anything the pattern matching cannot see — a monorepo, a PM2
+`ecosystem.config.js`, a socket server, a cron process — press **✨ Magic** and Claude
+reads the project itself. It runs `claude -p` in the folder with `Read`, `Glob` and
+`Grep` and nothing else, so it cannot change a thing, and it answers with services:
+name, command, the subdirectory to run in, a health path if the project serves one, and
+the file each one was read out of. They arrive as a checklist you approve — plus the
+things that have to be running first, like a database or redis. Needs Claude Code
+installed; if it is not, Harbor hands you the prompt to run yourself.
+
+```
+• backend — npm run dev    dir=note-app-backend   health=/health
+    nodemon ./bin/www; /health route in app.js
+• socket  — node server.js dir=note-app-backend
+    socket-server in ecosystem.config.js, SOCKET_PORT
+note: MySQL must be running · Redis for the Bull queues · npm install in both folders
+```
+
 **Ports are measured, not configured.** You never type a port into Harbor. When a
 service is running, it walks the tmux pane's process tree and asks `lsof` what those
 processes are actually listening on, so the row says `running · :3000` because
@@ -90,7 +107,7 @@ Free port`.
 `/health` (or a whole URL) and the dot only turns green once that URL responds;
 until then it stays yellow, which is the truth while a framework is still booting.
 
-**The edge strip.** A 44pt column of project chips docked to the right edge of the
+**The edge strip.** A column of project chips floating against the right edge of the
 screen, above every app and on every Space. A chip fills with the project's color when
 something in it is running. Hover it and it widens into the full list — every project
 with its services, each with a start/stop button, its status and its port. It is a

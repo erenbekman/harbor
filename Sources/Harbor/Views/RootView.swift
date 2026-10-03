@@ -5,6 +5,7 @@ enum ActiveSheet: Identifiable {
     case newProject
     case editProject(Project)
     case newService(Project)
+    case magic(Project)
     case editService(Project, Service)
 
     var id: String {
@@ -12,6 +13,7 @@ enum ActiveSheet: Identifiable {
         case .newProject: return "new-project"
         case .editProject(let p): return "edit-project-\(p.id)"
         case .newService(let p): return "new-service-\(p.id)"
+        case .magic(let p): return "magic-\(p.id)"
         case .editService(_, let s): return "edit-service-\(s.id)"
         }
     }
@@ -46,6 +48,8 @@ struct RootView: View {
                 ProjectSheet(project: project)
             case .newService(let project):
                 ServiceSheet(project: project, service: nil)
+            case .magic(let project):
+                MagicSheet(project: project)
             case .editService(let project, let service):
                 ServiceSheet(project: project, service: service)
             }

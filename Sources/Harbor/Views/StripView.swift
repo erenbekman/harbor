@@ -7,17 +7,30 @@ struct StripView: View {
     @EnvironmentObject private var runner: Runner
     @State private var lastDrag: CGFloat = 0
 
+    private var radius: CGFloat { strip.open ? 22 : 19 }
+
     var body: some View {
         Group {
             if strip.open { expandedBody } else { closed }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(.regularMaterial)
-        .clipShape(.rect(topLeadingRadius: 12, bottomLeadingRadius: 12))
-        .overlay(
-            UnevenRoundedRectangle(topLeadingRadius: 12, bottomLeadingRadius: 12)
-                .stroke(Theme.separator.opacity(0.7), lineWidth: 1)
-        )
+        .background(glass)
+        // The card floats; the window underneath still reaches the screen edge.
+        .padding(.trailing, Strip.edgeInset)
+    }
+
+    private var glass: some View {
+        RoundedRectangle(cornerRadius: radius, style: .continuous)
+            .fill(.ultraThinMaterial)
+            .overlay(
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .fill(Color.black.opacity(0.28))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .strokeBorder(Color.white.opacity(0.12), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.35), radius: 14, x: -2, y: 6)
     }
 
     /// Closed: one chip per project, with its initials — something to aim at,
@@ -26,21 +39,22 @@ struct StripView: View {
         VStack(spacing: Strip.chipSpacing) {
             ForEach(store.projects) { project in
                 let tint = Theme.tint(project.tint)
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .fill(tint.opacity(running(project) > 0 ? 1 : 0.22))
+                let live = running(project) > 0
+                Circle()
+                    .fill(live ? tint : tint.opacity(0.26))
                     .frame(width: Strip.chipSize, height: Strip.chipSize)
                     .overlay(
                         Text(project.badge)
-                            .font(.system(size: 12, weight: .semibold, design: .rounded))
-                            .foregroundStyle(running(project) > 0 ? Color.white : tint)
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .foregroundStyle(live ? Color.white : tint)
                     )
                     .overlay(alignment: .topTrailing) {
-                        if running(project) > 0 {
+                        if live {
                             Circle()
                                 .fill(ServiceStatus.running.color)
-                                .frame(width: 7, height: 7)
-                                .overlay(Circle().stroke(Color.black.opacity(0.35), lineWidth: 1))
-                                .offset(x: 2, y: -2)
+                                .frame(width: 8, height: 8)
+                                .overlay(Circle().strokeBorder(Color.black.opacity(0.45), lineWidth: 1.5))
+                                .offset(x: 1, y: -1)
                         }
                     }
             }
@@ -71,8 +85,8 @@ struct StripView: View {
     /// The strip is dragged by this, never by its rows — a row is a button.
     private var grip: some View {
         Capsule()
-            .fill(Theme.secondary.opacity(0.35))
-            .frame(width: 26, height: 3)
+            .fill(Color.white.opacity(0.25))
+            .frame(width: 28, height: 4)
             .frame(maxWidth: .infinity)
             .frame(height: Strip.gripHeight)
             .contentShape(Rectangle())
@@ -94,31 +108,29 @@ struct StripView: View {
     }
 
     private func projectRow(_ project: Project) -> some View {
-        HStack(spacing: 8) {
-            RoundedRectangle(cornerRadius: 3, style: .continuous)
+        HStack(spacing: 9) {
+            Circle()
                 .fill(Theme.tint(project.tint))
                 .frame(width: 9, height: 9)
             Text(project.name)
-                .font(.system(size: 12, weight: .medium))
+                .font(.system(size: 13, weight: .semibold))
                 .lineLimit(1)
                 .truncationMode(.middle)
             Spacer(minLength: 2)
             if running(project) > 0 {
-                HStack(spacing: 3) {
-                    Circle()
-                        .fill(ServiceStatus.running.color)
-                        .frame(width: 5, height: 5)
-                    Text("\(running(project))")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(Theme.secondary)
-                }
+                Text("\(running(project))")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(ServiceStatus.running.color)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Capsule().fill(ServiceStatus.running.color.opacity(0.18)))
             }
-            Image(systemName: "chevron.right")
-                .font(.system(size: 8, weight: .semibold))
-                .foregroundStyle(Theme.secondary)
-                .rotationEffect(.degrees(strip.collapsed.contains(project.id) ? 0 : 90))
+            Image(systemName: "chevron.down")
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(.secondary)
+                .rotationEffect(.degrees(strip.collapsed.contains(project.id) ? -90 : 0))
         }
-        .padding(.horizontal, 10)
+        .padding(.horizontal, 12)
         .frame(height: Strip.rowHeight)
         .contentShape(Rectangle())
         .onTapGesture {
@@ -133,41 +145,46 @@ struct StripView: View {
 
     @ViewBuilder
     private func services(of project: Project) -> some View {
-        VStack(spacing: 0) {
+        VStack(spacing: 2) {
             if project.services.isEmpty {
                 Text("no services")
                     .font(.system(size: 11))
-                    .foregroundStyle(Theme.secondary)
+                    .foregroundStyle(.secondary)
                     .frame(height: Strip.serviceHeight)
             }
             ForEach(project.services) { service in
                 let status = runner.status(of: service)
-                HStack(spacing: 8) {
+                HStack(spacing: 9) {
                     Button { runner.toggle(service, in: project) } label: {
                         Image(systemName: status.isLive ? "stop.fill" : "play.fill")
                             .font(.system(size: 9, weight: .bold))
-                            .frame(width: 20, height: 20)
-                            .background(Circle().fill(Theme.separator.opacity(0.35)))
+                            .foregroundStyle(.white)
+                            .frame(width: 24, height: 24)
+                            .background(Circle().fill(Color.white.opacity(status.isLive ? 0.22 : 0.12)))
                     }
                     .buttonStyle(.plain)
 
                     VStack(alignment: .leading, spacing: 1) {
                         Text(service.name)
-                            .font(.system(size: 11, weight: .medium))
+                            .font(.system(size: 12, weight: .medium))
                             .lineLimit(1)
                         Text(status.label(port: runner.port(of: service)))
-                            .font(.system(size: 9))
-                            .foregroundStyle(Theme.secondary)
+                            .font(.system(size: 10))
+                            .foregroundStyle(.secondary)
                             .lineLimit(1)
                     }
                     Spacer(minLength: 0)
                     Circle()
                         .fill(status.color)
-                        .frame(width: 5, height: 5)
+                        .frame(width: 6, height: 6)
                 }
-                .padding(.leading, 14)
-                .padding(.trailing, 10)
-                .frame(height: Strip.serviceHeight)
+                .padding(.horizontal, 10)
+                .frame(height: Strip.serviceHeight - 2)
+                .background(
+                    RoundedRectangle(cornerRadius: 11, style: .continuous)
+                        .fill(Color.white.opacity(0.06))
+                )
+                .padding(.horizontal, 8)
             }
         }
         .padding(.bottom, 6)

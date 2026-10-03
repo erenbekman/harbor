@@ -52,6 +52,10 @@ struct ServicesPanel: View {
                 Label("Stop all", systemImage: "stop.fill")
             }
             .disabled(runningServices == 0)
+            Button { sheet = .magic(project) } label: {
+                Label("Magic", systemImage: "sparkles")
+            }
+            .help("Let Claude read the project and propose its services")
             Button { sheet = .newService(project) } label: {
                 Image(systemName: "plus")
             }
@@ -70,6 +74,7 @@ struct ServicesPanel: View {
                 .foregroundStyle(Theme.secondary)
             HStack(spacing: 8) {
                 Button("Add service") { sheet = .newService(project) }
+                Button("Magic") { sheet = .magic(project) }
                 if !detected.isEmpty {
                     Button("Add \(detected.count) detected") {
                         var copy = project
