@@ -92,6 +92,16 @@ Sources/Harbor/
   would need the Accessibility permission for the same keystroke. The palette is an
   `NSPanel` subclass overriding `canBecomeKey` — a borderless panel takes no keystrokes
   otherwise, and a switcher that cannot be typed into is decoration.
+- **`--allowedTools` is a PERMISSION list, not a tool list.** Bash stays on offer to the
+  model, and in print mode a Bash call can never be approved — so the CLI waits for a
+  decision that cannot come. That is a hang, not an error: the scan sat there until the
+  timeout while the model had simply reached for `for d in */; do ls $d; done`.
+  `--disallowedTools` takes the tool away, and a reach for one comes back as a refusal
+  the model carries on from. MCP servers are off for the same reason plus their own
+  (`--strict-mcp-config --mcp-config '{"mcpServers":{}}'`): four of them starting up on
+  every scan, with tools that would hit the same trap. The transcript under
+  `~/.claude/projects/<slug>/` is where this was finally visible — it records the tool
+  call the hang is sitting on.
 - **Magic is READ-ONLY and does not write the answer anywhere.** `claude -p` runs with
   `--allowedTools Read,Glob,Grep`, and what comes back is a proposal the user ticks.
   Claude Studio let Claude write `services.json` itself; here a wrong command that

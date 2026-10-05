@@ -69,19 +69,29 @@ nothing is added behind your back.
 **Magic.** For anything the pattern matching cannot see — a monorepo, a PM2
 `ecosystem.config.js`, a socket server, a cron process — press **✨ Magic** and Claude
 reads the project itself. It runs `claude -p` in the folder with `Read`, `Glob` and
-`Grep` and nothing else, so it cannot change a thing, and it answers with services:
-name, command, the subdirectory to run in, a health path if the project serves one, and
-the file each one was read out of. They arrive as a checklist you approve — plus the
-things that have to be running first, like a database or redis. Needs Claude Code
-installed; if it is not, Harbor hands you the prompt to run yourself.
+`Grep`, with every other tool taken away and MCP servers switched off, so it cannot
+change a thing and it starts in a second. It answers with services: name, command, the
+subdirectory to run in, a health path if the project serves one, and the file each one
+was read out of. They arrive as a checklist you approve — plus the things that have to
+be running first. Needs Claude Code installed; if it is not, Harbor hands you the prompt
+to run yourself.
+
+A real answer, in 20 seconds, for a four-app monorepo:
 
 ```
-• backend — npm run dev    dir=note-app-backend   health=/health
-    nodemon ./bin/www; /health route in app.js
-• socket  — node server.js dir=note-app-backend
-    socket-server in ecosystem.config.js, SOCKET_PORT
-note: MySQL must be running · Redis for the Bull queues · npm install in both folders
+• backend  — npm run dev   dir=note-app-backend   health=/health
+• frontend — npm run dev   dir=nott_frontend-main
+• client   — npm run dev   dir=note-app-client
+• admin    — npm run dev   dir=nott-admin-panel
+• landing  — npm run dev   dir=nott-landing-page
+note: the backend needs MySQL (sequelize) and Redis (bull), migrations via npm run migrate
+note: nott_frontend-main needs Node 22 (.nvmrc) — Node 26 breaks vite-node
+note: all four Nuxt apps default to port 3000, so they collide if started together
 ```
+
+Every run is written to `~/Library/Application Support/Harbor/magic.log` — the command,
+the exit code and Claude's raw answer — because a CLI spawned by a GUI app has nowhere
+else to report from.
 
 **Ports are measured, not configured.** You never type a port into Harbor. When a
 service is running, it walks the tmux pane's process tree and asks `lsof` what those

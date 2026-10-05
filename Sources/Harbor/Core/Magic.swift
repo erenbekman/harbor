@@ -49,12 +49,33 @@ enum Magic {
     static func scan(_ project: Project) throws -> Answer {
         guard Shell.which("claude") != nil else { throw Failure.missingCLI }
 
+        // `--allowedTools` is a permission list, not a tool list: Bash stays on
+        // offer, and in print mode a Bash call can never be approved — the CLI
+        // then waits for a decision that cannot come, which is a hang, not an
+        // error. `--disallowedTools` takes those tools away, so a reach for one
+        // comes back as a refusal the model can carry on from. MCP servers are
+        // switched off for the same reason, and because four of them starting up
+        // is seconds this never needed.
         let command = "cd \(Shell.quoted(project.path)) && claude -p \(Shell.quoted(prompt(for: project))) "
-            + "--output-format json --allowedTools \(Shell.quoted("Read,Glob,Grep"))"
+            + "--output-format json "
+            + "--allowedTools \(Shell.quoted("Read,Glob,Grep")) "
+            + "--disallowedTools \(Shell.quoted("Bash,Write,Edit,MultiEdit,NotebookEdit,WebFetch,WebSearch,Task")) "
+            + "--strict-mcp-config --mcp-config \(Shell.quoted("{\"mcpServers\":{}}"))"
         // `-l` but NOT `-i`: the PATH is injected already, and an interactive zsh
         // without a tty writes "can't change option: zle" over the answer.
         let result = Shell.run("/bin/zsh", ["-l", "-c", command], timeout: 300)
+        log(command: command, status: result.status, output: result.output)
         if result.status == -2 { throw Failure.timedOut }
+
+        // The CLI reports its own failures inside the envelope — "Not logged in",
+        // a refused tool, a rate limit — and that message beats anything this app
+        // could say instead.
+        if let slice = Self.jsonSlice(result.output),
+           let data = slice.data(using: .utf8),
+           let envelope = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let failed = envelope["is_error"] as? Bool, failed {
+            throw Failure.failed((envelope["result"] as? String) ?? "Claude reported an error.")
+        }
 
         // `--output-format json` wraps the answer, and the CLI may print a line of
         // its own before it — so the JSON is cut out rather than assumed to be the
@@ -70,6 +91,19 @@ enum Magic {
             throw Failure.failed(trimmed.isEmpty ? "Claude answered with nothing." : String(trimmed.prefix(400)))
         }
         return answer
+    }
+
+    /// The only place a failure in a GUI-spawned CLI can be read back from.
+    private static func log(command: String, status: Int32, output: String) {
+        let entry = "--- \(Date()) exit \(status)\n\(command.prefix(400))\n\(output.prefix(4000))\n\n"
+        let url = Paths.support.appendingPathComponent("magic.log")
+        if let handle = try? FileHandle(forWritingTo: url) {
+            handle.seekToEndOfFile()
+            handle.write(Data(entry.utf8))
+            try? handle.close()
+        } else {
+            try? entry.write(to: url, atomically: true, encoding: .utf8)
+        }
     }
 
     private static func jsonSlice(_ text: String) -> String? {

@@ -105,8 +105,11 @@ enum Shell {
 
         do { try p.run() } catch { return (-1, "\(error)") }
         if done.wait(timeout: .now() + timeout) == .timedOut {
+            // Whatever it did manage to say is the only clue there is.
             p.terminate()
-            return (-2, "")
+            _ = done.wait(timeout: .now() + 2)
+            reader.sync {}
+            return (-2, String(data: box.data, encoding: .utf8) ?? "")
         }
         reader.sync {}
         return (p.terminationStatus, String(data: box.data, encoding: .utf8) ?? "")
