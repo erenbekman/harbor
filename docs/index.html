@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Harbor — your projects' dev servers, one click away</title>
+<meta name="description" content="A native macOS app that starts and stops each project's dev servers. Services run in tmux, so they outlive the app.">
+<meta property="og:title" content="Harbor">
+<meta property="og:description" content="Your projects' dev servers, one click away. Services run in tmux, so they outlive the app.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23102037'/%3E%3Crect x='12' y='12' width='14' height='40' rx='6' fill='%230B1626'/%3E%3Crect x='15' y='16' width='8' height='8' rx='2.5' fill='%23E07A3F'/%3E%3Crect x='15' y='28' width='8' height='8' rx='2.5' fill='%233D5A80'/%3E%3Crect x='15' y='40' width='8' height='8' rx='2.5' fill='%233D5A80'/%3E%3Crect x='32' y='18' width='22' height='28' rx='6' fill='%23ffffff' fill-opacity='0.1'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#0c1420; --bg-2:#101d2e; --card:rgba(255,255,255,.045); --line:rgba(255,255,255,.1);
+  --ink:#eef3fa; --muted:#93a4bb; --accent:#e07a3f; --green:#3eb85f; --amber:#e8b33c; --red:#e05545;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;line-height:1.55;
+  background-image:radial-gradient(1200px 600px at 75% -10%,rgba(224,122,63,.14),transparent 60%),
+                   radial-gradient(900px 500px at 10% 0%,rgba(61,90,128,.25),transparent 55%);
+}
+a{color:inherit}
+.wrap{max-width:1060px;margin:0 auto;padding:0 24px}
+
+nav{display:flex;align-items:center;justify-content:space-between;padding:22px 0;gap:16px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:650;letter-spacing:-.2px;text-decoration:none}
+.brand svg{display:block}
+.nav-links{display:flex;align-items:center;gap:8px;font-size:14px}
+.nav-links a{color:var(--muted);text-decoration:none;padding:7px 12px;border-radius:9px}
+.nav-links a:hover{color:var(--ink);background:var(--card)}
+.btn{display:inline-flex;align-items:center;gap:8px;border-radius:11px;padding:10px 16px;font-size:14px;
+     font-weight:600;text-decoration:none;border:1px solid transparent;white-space:nowrap}
+.btn-primary{background:var(--accent);color:#1a0f07;border-color:rgba(255,255,255,.14)}
+.btn-primary:hover{filter:brightness(1.08)}
+.btn-ghost{border-color:var(--line);color:var(--ink);background:var(--card)}
+.btn-ghost:hover{background:rgba(255,255,255,.08)}
+
+header.hero{padding:62px 0 36px;text-align:center}
+h1{font-size:clamp(34px,5.4vw,56px);line-height:1.07;letter-spacing:-1.4px;margin:0 0 18px;font-weight:700}
+h1 .grad{background:linear-gradient(100deg,#fff 15%,var(--accent));-webkit-background-clip:text;
+         background-clip:text;color:transparent}
+.lede{font-size:clamp(16px,2vw,19px);color:var(--muted);max-width:640px;margin:0 auto 26px}
+.cta{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:14px}
+.meta{font-size:13px;color:var(--muted)}
+.meta code{font-family:var(--mono);font-size:12.5px;color:#c8d6e8}
+
+.shot{margin:46px auto 0;max-width:980px;position:relative}
+.window{background:linear-gradient(180deg,#16202e,#111a26);border:1px solid var(--line);border-radius:16px;
+        box-shadow:0 40px 90px -30px rgba(0,0,0,.85);overflow:hidden;display:grid;grid-template-columns:186px 1fr}
+.titlebar{grid-column:1/-1;display:flex;align-items:center;gap:7px;padding:11px 14px;border-bottom:1px solid var(--line)}
+.dot{width:11px;height:11px;border-radius:50%}
+.dot.r{background:#ec6a5e}.dot.y{background:#f4bf4f}.dot.g{background:#61c454}
+.titlebar span{margin-left:8px;font-size:12.5px;color:var(--muted);font-weight:600}
+.side{border-right:1px solid var(--line);padding:12px 8px;background:rgba(0,0,0,.18)}
+.prow{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:9px;font-size:13px}
+.prow.on{background:rgba(255,255,255,.08);font-weight:600}
+.swatch{width:10px;height:10px;border-radius:3px;flex:none}
+.prow .count{margin-left:auto;font-size:10px;font-weight:700;color:var(--green);
+              background:rgba(62,184,95,.16);border-radius:99px;padding:1px 6px}
+.side .add{color:var(--muted);font-size:13px;padding:7px 10px}
+.main{padding:16px 18px 22px}
+.phead{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px}
+.phead h3{margin:0;font-size:19px;letter-spacing:-.3px}
+.phead p{margin:2px 0 0;font-size:11.5px;color:var(--muted);font-family:var(--mono)}
+.pbtns{margin-left:auto;display:flex;gap:7px}
+.pill{font-size:11px;border:1px solid var(--line);background:var(--card);border-radius:8px;padding:5px 10px;color:#cfdcec}
+.pill.magic{border-color:rgba(224,122,63,.5);color:#f0b48a}
+.srv{display:flex;align-items:center;gap:11px;padding:10px 12px;border:1px solid var(--line);
+     border-radius:11px;background:var(--card);margin-bottom:8px}
+.play{width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.1);display:grid;place-items:center;
+      font-size:9px;color:#fff;flex:none}
+.srv b{display:block;font-size:13px;font-weight:600}
+.srv small{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px}
+.sdot{width:6px;height:6px;border-radius:50%;display:inline-block}
+.srv .chev{margin-left:auto;color:var(--muted);font-size:11px}
+
+.strip{position:absolute;right:-14px;top:58%;transform:translateY(-50%);width:196px;
+       background:rgba(18,27,40,.86);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+       border:1px solid rgba(255,255,255,.13);border-radius:20px;padding:10px 0 12px;
+       box-shadow:0 30px 60px -20px rgba(0,0,0,.9)}
+.grip{width:28px;height:4px;border-radius:99px;background:rgba(255,255,255,.26);margin:2px auto 8px}
+.strip .prow{font-size:12.5px;padding:5px 12px}
+.strip .srv{margin:2px 8px;padding:6px 10px;border:0;background:rgba(255,255,255,.06)}
+.strip .srv b{font-size:11.5px}.strip .srv small{font-size:9.5px}
+.strip .play{width:22px;height:22px;font-size:8px}
+.caption{text-align:center;font-size:13px;color:var(--muted);margin:18px auto 0;max-width:620px}
+
+section{padding:76px 0}
+h2{font-size:clamp(25px,3.4vw,34px);letter-spacing:-.8px;margin:0 0 10px;font-weight:700}
+.sub{color:var(--muted);margin:0 0 34px;max-width:620px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(272px,1fr));gap:14px}
+.card{border:1px solid var(--line);background:var(--card);border-radius:15px;padding:20px}
+.card h3{margin:0 0 7px;font-size:15.5px;letter-spacing:-.2px;display:flex;align-items:center;gap:8px}
+.card p{margin:0;color:var(--muted);font-size:14px}
+.card .ic{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-size:13px;
+          background:rgba(224,122,63,.16);flex:none}
+
+pre{background:#0a121d;border:1px solid var(--line);border-radius:13px;padding:16px 18px;overflow:auto;
+    font-family:var(--mono);font-size:13px;line-height:1.7;margin:0}
+pre .c{color:#6e8198}
+pre .k{color:var(--accent)}
+pre .g{color:var(--green)}
+pre .m{color:var(--muted)}
+
+.split{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}
+.note{border-left:2px solid rgba(224,122,63,.55);padding:3px 0 3px 15px;margin:0 0 20px}
+.note h4{margin:0 0 5px;font-size:14.5px}
+.note p{margin:0;color:var(--muted);font-size:14px}
+
+.install{border:1px solid var(--line);border-radius:18px;padding:30px;background:
+  linear-gradient(180deg,rgba(224,122,63,.1),transparent 60%),var(--card)}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;margin-top:22px}
+.step{font-size:14px;color:var(--muted)}
+.step b{display:block;color:var(--ink);font-size:14.5px;margin-bottom:3px}
+.step i{font-style:normal;color:var(--accent);font-family:var(--mono);font-size:12px}
+
+footer{border-top:1px solid var(--line);padding:30px 0 50px;color:var(--muted);font-size:13.5px;
+       display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+footer a{color:var(--muted)}
+
+@media (max-width:900px){
+  .strip{display:none}
+  .window{grid-template-columns:150px 1fr}
+  .split{grid-template-columns:1fr}
+}
+@media (max-width:560px){
+  .window{grid-template-columns:1fr}
+  .side{display:none}
+  section{padding:56px 0}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<nav>
+  <a class="brand" href="#top">
+    <svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true">
+      <rect width="64" height="64" rx="15" fill="#102037"/>
+      <rect x="11" y="12" width="15" height="40" rx="7" fill="#0B1626"/>
+      <rect x="14.5" y="16" width="8" height="8" rx="2.5" fill="#E07A3F"/>
+      <rect x="14.5" y="28" width="8" height="8" rx="2.5" fill="#3D5A80"/>
+      <rect x="14.5" y="40" width="8" height="8" rx="2.5" fill="#3D5A80"/>
+      <rect x="31" y="18" width="22" height="28" rx="6" fill="#fff" fill-opacity=".1"/>
+      <circle cx="37" cy="27" r="2.6" fill="#3EB85F"/>
+      <rect x="42" y="25.4" width="8" height="3" rx="1.5" fill="#fff" fill-opacity=".4"/>
+      <circle cx="37" cy="37" r="2.6" fill="#fff" fill-opacity=".3"/>
+      <rect x="42" y="35.4" width="8" height="3" rx="1.5" fill="#fff" fill-opacity=".3"/>
+    </svg>
+    Harbor
+  </a>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#how">How it works</a>
+    <a href="#install">Install</a>
+    <a class="btn btn-ghost" href="https://github.com/erenbekman/harbor">GitHub</a>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <h1>Your projects' dev servers,<br><span class="grad">one click away.</span></h1>
+  <p class="lede">
+    Harbor is a small native macOS app for the thing you do before writing any code:
+    starting <code>npm run dev</code> in one folder, <code>php artisan serve</code> and a queue worker
+    in another — and then remembering which of them is still running.
+  </p>
+  <div class="cta">
+    <a class="btn btn-primary" href="https://github.com/erenbekman/harbor/releases/latest">Download for macOS</a>
+    <a class="btn btn-ghost" href="https://github.com/erenbekman/harbor">View source</a>
+  </div>
+  <p class="meta">macOS 14+ · Swift &amp; SwiftUI, no dependencies · needs <code>tmux</code></p>
+
+  <div class="shot">
+    <div class="window">
+      <div class="titlebar"><i class="dot r"></i><i class="dot y"></i><i class="dot g"></i><span>Harbor</span></div>
+      <aside class="side">
+        <div class="prow on"><i class="swatch" style="background:#e07a3f"></i>nott<span class="count">2</span></div>
+        <div class="prow"><i class="swatch" style="background:#4a8fe3"></i>ustad</div>
+        <div class="prow"><i class="swatch" style="background:#dba93a"></i>medvise</div>
+        <div class="prow"><i class="swatch" style="background:#8a70d9"></i>harbor</div>
+        <div class="add">+ Add project</div>
+      </aside>
+      <main class="main">
+        <div class="phead">
+          <div><h3>nott</h3><p>~/Documents/GitHub/nott</p></div>
+          <div class="pbtns">
+            <span class="pill">▶ Start all</span><span class="pill">■ Stop all</span>
+            <span class="pill magic">✦ Magic</span><span class="pill">+</span>
+          </div>
+        </div>
+        <div class="srv">
+          <i class="play">■</i>
+          <div><b>backend</b><small><i class="sdot" style="background:var(--green)"></i>running · :4000</small></div>
+          <span class="chev">›</span>
+        </div>
+        <div class="srv">
+          <i class="play">■</i>
+          <div><b>client</b><small><i class="sdot" style="background:var(--green)"></i>running · :3000</small></div>
+          <span class="chev">›</span>
+        </div>
+        <div class="srv">
+          <i class="play">▶</i>
+          <div><b>horizon</b><small><i class="sdot" style="background:var(--muted)"></i>stopped</small></div>
+          <span class="chev">›</span>
+        </div>
+        <div class="srv">
+          <i class="play">▶</i>
+          <div><b>admin</b><small><i class="sdot" style="background:var(--red)"></i>exited (1) · :3000 held by node (4821)</small></div>
+          <span class="chev">›</span>
+        </div>
+      </main>
+    </div>
+    <div class="strip">
+      <div class="grip"></div>
+      <div class="prow"><i class="swatch" style="background:#e07a3f"></i>nott<span class="count">2</span></div>
+      <div class="srv"><i class="play">■</i><div><b>backend</b><small><i class="sdot" style="background:var(--green)"></i>running · :4000</small></div></div>
+      <div class="srv"><i class="play">▶</i><div><b>horizon</b><small><i class="sdot" style="background:var(--muted)"></i>stopped</small></div></div>
+      <div class="prow"><i class="swatch" style="background:#4a8fe3"></i>ustad</div>
+      <div class="srv"><i class="play">■</i><div><b>serve</b><small><i class="sdot" style="background:var(--amber)"></i>starting…</small></div></div>
+    </div>
+  </div>
+  <p class="caption">The window is where you set things up. The strip on the right edge is where the rest of
+     the day happens — it is there while you are in the editor, and nothing it does takes your focus.</p>
+</header>
+
+<section id="features">
+  <h2>What it does</h2>
+  <p class="sub">Everything here exists because the alternative was four terminal tabs and a guess.</p>
+  <div class="grid">
+    <div class="card">
+      <h3><span class="ic">⇥</span>Survives the app</h3>
+      <p>Services run inside tmux. Quit Harbor and your dev server keeps serving; open it again and it is
+         still there, still green, still on <code>:3000</code>. An update never touches them.</p>
+    </div>
+    <div class="card">
+      <h3><span class="ic">⌁</span>Ports are measured</h3>
+      <p>You never type a port into Harbor. It walks the tmux pane's process tree and asks
+         <code>lsof</code> what is actually listening — then gives you a button that opens it.</p>
+    </div>
+    <div class="card">
+      <h3><span class="ic">✦</span>Magic</h3>
+      <p>Claude reads the project and proposes its services — monorepos, PM2 configs, socket servers,
+         cron processes — with the file each one came from. Read-only, and nothing is added until you tick it.</p>
+    </div>
+    <div class="card">
+      <h3><span class="ic">◧</span>The edge strip</h3>
+      <p>A column of project chips floating on the right edge, above every app and on every Space.
+         Hover to see every service; press play without losing focus in your editor.</p>
+    </div>
+    <div class="card">
+      <h3><span class="ic">⚠</span>Crashes stay readable</h3>
+      <p>A service that exits keeps its output and exit code instead of vanishing. If the port was taken,
+         the row names the process holding it and offers to kill it.</p>
+    </div>
+    <div class="card">
+      <h3><span class="ic">⌘</span>Quick switcher</h3>
+      <p><code>⌃⌘H</code> from anywhere: type a project or service name, Enter starts or stops it.
+         No window, no mouse. The same list lives in the menu bar.</p>
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <h2>How it works</h2>
+  <p class="sub">Three decisions the whole app rests on.</p>
+  <div class="split">
+    <div>
+      <div class="note">
+        <h4>One tmux session per service</h4>
+        <p>Named from a stable hash of the project path, so the same folder maps to the same session on every
+           launch — which is how Harbor finds services it did not start in this run and adopts them instead of
+           starting a second copy.</p>
+      </div>
+      <div class="note">
+        <h4>One poll answers for everything</h4>
+        <p>Every two seconds: one <code>list-panes</code> for liveness and exit codes, one <code>ps</code> for
+           the process tree, one <code>lsof</code> for the ports. No per-service polling, and nothing is drawn
+           again unless the value actually changed.</p>
+      </div>
+      <div class="note">
+        <h4>A port is not an answer</h4>
+        <p>Give a service a health path and the dot goes green only when the URL responds — not when the port
+           opens. While a framework is still booting, yellow is the truth.</p>
+      </div>
+    </div>
+    <div>
+<pre><span class="c"># a service, really</span>
+tmux -S /tmp/harbor-501.sock \
+  new-session -d -s hb-3b92hjqj-5de35ab8 \
+  <span class="m">'cd backend &amp;&amp; npm run dev'</span>
+
+<span class="c"># what the dot means</span>
+<span class="g">●</span> running   alive <span class="m">·</span> answering <span class="m">·</span> :4000
+<span class="k">●</span> starting  alive, nothing listening yet
+<span class="k">●</span> exited    kept, with its exit code
+○ stopped</pre>
+    </div>
+  </div>
+</section>
+
+<section id="install">
+  <div class="install">
+    <h2>Install</h2>
+    <p class="sub">Clone and run one script. It installs tmux with Homebrew if you do not have it.</p>
+<pre>git clone https://github.com/erenbekman/harbor.git
+cd harbor
+./install.sh</pre>
+    <div class="steps">
+      <div class="step"><b>Add a folder</b>Harbor reads it and offers what it finds — npm, pnpm, yarn or bun
+        scripts, artisan, Django, docker compose.</div>
+      <div class="step"><b>Or press Magic</b>Claude reads the project for anything the pattern matching
+        cannot see.</div>
+      <div class="step"><b>It updates itself</b><i>Settings → About</i> checks the latest release and installs
+        it; your services keep running through it.</div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <span>Harbor — a macOS app by <a href="https://github.com/erenbekman">erenbekman</a>.</span>
+  <span><a href="https://github.com/erenbekman/harbor">Source</a> ·
+        <a href="https://github.com/erenbekman/harbor/releases">Releases</a> ·
+        <a href="https://github.com/erenbekman/harbor/issues">Issues</a></span>
+</footer>
+
+</div>
+</body>
+</html>
