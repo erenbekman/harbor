@@ -2,6 +2,8 @@
 
 A rail of projects, and every project's dev servers one click away.
 
+**[harbor's page →](https://erenbekman.github.io/harbor/)**
+
 Harbor is a small native macOS app for the thing you do before you write any code:
 starting `npm run dev` in one folder, `php artisan serve` and a queue worker in
 another, a `docker compose up` somewhere else — and then remembering which of them is
