@@ -3,307 +3,242 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>harbor — your dev servers keep running</title>
-<meta name="description" content="A native macOS app that starts and stops each project's dev servers. Services run in tmux, so they outlive the app.">
-<meta property="og:title" content="harbor">
-<meta property="og:description" content="Quit harbor — your dev servers keep running. A small native macOS app that starts and stops each project's services.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%231e2022'/%3E%3Ccircle cx='12' cy='8.2' r='3' fill='%230a84ff'/%3E%3Cg stroke='%23e8e9ea' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' fill='none'%3E%3Cpath d='M12 11.2v4.4'/%3E%3Cpath d='M3.2 17.6c2-1.6 4-1.6 6 0s4 1.6 6 0 3.8-1.6 5.6 0'/%3E%3C/g%3E%3C/svg%3E">
+<title>Harbor — your dev servers keep running</title>
+<meta name="description" content="A small native macOS app that starts and stops each project's dev servers. They run in tmux, so quitting Harbor stops nothing.">
+<meta property="og:title" content="Harbor">
+<meta property="og:description" content="Quit Harbor — your dev servers keep running.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%2317191b'/%3E%3Ccircle cx='12' cy='8.2' r='3' fill='%230a84ff'/%3E%3Cg stroke='%23e9eaec' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' fill='none'%3E%3Cpath d='M12 11.2v4.4'/%3E%3Cpath d='M3.2 17.6c2-1.6 4-1.6 6 0s4 1.6 6 0 3.8-1.6 5.6 0'/%3E%3C/g%3E%3C/svg%3E">
 <style>
 :root{
-  --bg:#1e2022; --ink:#e8e9ea; --dim:#9aa0a6; --faint:#4b5155; --line:#2f3336;
-  --accent:#0a84ff; --on-accent:#ffffff;
+  --bg:#17191b; --panel:#1f2225; --raised:#262a2e; --line:rgba(255,255,255,.09);
+  --ink:#e9eaec; --dim:#9aa0a6; --faint:#6f767d; --accent:#0a84ff;
   --green:#30d158; --amber:#ff9f0a; --red:#ff453a;
-  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;
 }
-::selection{background:var(--accent);color:var(--on-accent)}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
-body{
-  margin:0;background:var(--bg);color:var(--ink);font:14px/1.6 var(--mono);
-  -webkit-font-smoothing:antialiased;
-}
-.wrap{max-width:860px;margin:0 auto;padding:0 20px}
-.screen{max-width:900px;margin:26px auto 40px;border:1px solid var(--line)}
-.chrome{display:flex;align-items:center;gap:7px;padding:9px 13px;border-bottom:1px solid var(--line);
-        position:sticky;top:0;background:var(--bg);z-index:2}
-.chrome i{width:10px;height:10px;border-radius:50%;background:var(--faint);display:block}
-.chrome i:first-child{background:var(--red)}
-.chrome i:nth-child(2){background:var(--amber)}
-.chrome i:nth-child(3){background:var(--green)}
-.chrome span{flex:1;text-align:center;font-size:12px;color:var(--dim);
-             margin-right:48px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.btns{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
-.btn{border:1px solid var(--line);padding:10px 16px;text-decoration:none;font-size:13px}
-.btn:hover{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
-.btn.key{border-color:var(--accent);color:var(--accent)}
-.btn.key:hover{color:var(--on-accent)}
-.facts{display:flex;flex-wrap:wrap;gap:0 22px;font-size:12.5px;color:var(--dim);
-       border-top:1px solid var(--line);padding-top:14px}
-.facts b{color:var(--ink);font-weight:400}
-a{color:var(--ink);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
-a:hover{background:var(--accent);color:var(--on-accent);text-decoration:none}
-.dim{color:var(--dim)}
-.acc{color:var(--accent)}
-.g{color:var(--green)}.y{color:var(--amber)}.r{color:var(--red)}.f{color:var(--faint)}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+.wrap{max-width:900px;margin:0 auto;padding:0 24px}
 
-header.top{display:flex;justify-content:space-between;align-items:baseline;gap:16px;
-           padding:18px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
-.screen .wrap{padding:0 26px}
-@media (max-width:560px){.screen .wrap{padding:0 16px}.chrome span{display:none}}
-header.top b{font-weight:700;letter-spacing:.5px}
-header.top nav{display:flex;gap:16px;font-size:13px}
+nav{display:flex;align-items:center;justify-content:space-between;padding:20px 0;gap:16px}
+.brand{display:flex;align-items:center;gap:9px;color:var(--ink);font-weight:600;letter-spacing:-.2px}
+.brand:hover{text-decoration:none}
+.nav-links{display:flex;align-items:center;gap:20px;font-size:14px}
+.nav-links a{color:var(--dim)}
+.nav-links a:hover{color:var(--ink);text-decoration:none}
 
-.hero{padding:60px 0 44px;border-bottom:1px solid var(--line)}
-h1{font-size:clamp(28px,6vw,46px);line-height:1.08;margin:0 0 22px;font-weight:700;letter-spacing:-1px}
-h1 .cursor{display:inline-block;width:.55em;height:1em;background:var(--accent);
-           vertical-align:-.12em;margin-left:.1em;animation:blink 1.1s steps(1) infinite}
-@keyframes blink{50%{opacity:0}}
-@media (prefers-reduced-motion:reduce){h1 .cursor{animation:none}}
-.hero p{max-width:66ch;color:var(--dim);margin:0 0 26px}
-.hero p b{color:var(--ink);font-weight:400}
-.run{border:1px solid var(--line);padding:14px 16px;max-width:66ch;margin-bottom:18px;overflow-x:auto}
-.run div{white-space:pre}
-.links{display:flex;gap:18px;font-size:13px;flex-wrap:wrap}
+header{padding:64px 0 40px;text-align:center}
+h1{font-size:clamp(32px,5vw,50px);line-height:1.08;letter-spacing:-1.4px;margin:0 0 18px;font-weight:600}
+h1 span{color:var(--dim)}
+.lede{font-size:17px;color:var(--dim);max-width:600px;margin:0 auto 28px}
+.cta{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:7px;border-radius:9px;padding:9px 18px;font-size:14px;font-weight:500}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{filter:brightness(1.08);text-decoration:none}
+.btn-ghost{border:1px solid var(--line);color:var(--ink)}
+.btn-ghost:hover{background:var(--raised);text-decoration:none}
+.facts{margin-top:20px;font-size:13px;color:var(--faint)}
 
-.art{padding:34px 0;border-bottom:1px solid var(--line);overflow-x:auto}
-.art pre{margin:0;font-size:clamp(9px,1.35vw,12.5px);line-height:1.45;white-space:pre;color:var(--dim)}
-.art pre.wide{font-size:clamp(11px,1.9vw,15px);line-height:1.5}
-.shot{display:block;width:100%;border:1px solid var(--line);margin-bottom:22px}
-.art pre b{color:var(--ink);font-weight:400}
-.art .cap{margin:18px 0 0;color:var(--dim);font-size:13px;max-width:70ch}
+.shot{margin:44px auto 0;max-width:860px}
+.shot img{width:100%;display:block;border-radius:12px;border:1px solid var(--line)}
+.mock{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;
+      display:grid;grid-template-columns:168px 1fr;box-shadow:0 30px 70px -30px #000}
+.mock .bar{grid-column:1/-1;display:flex;align-items:center;gap:7px;padding:10px 13px;border-bottom:1px solid var(--line)}
+.dot{width:11px;height:11px;border-radius:50%}
+.mock .side{border-right:1px solid var(--line);padding:10px 8px;display:flex;flex-direction:column;gap:2px}
+.srow{display:flex;align-items:center;gap:8px;padding:5px 9px;border-radius:6px;font-size:13px;color:var(--dim)}
+.srow.on{background:var(--accent);color:#fff}
+.srow i{width:8px;height:8px;border-radius:50%;flex:none}
+.srow b{margin-left:auto;font-weight:500;font-size:11px;opacity:.85}
+.mock .main{padding:16px 18px 20px}
+.mock h3{margin:0;font-size:18px;font-weight:600;letter-spacing:-.3px}
+.crumbs{font-size:11px;color:var(--faint);margin:2px 0 16px}
+.label{font-size:11px;font-weight:600;color:var(--dim);display:flex;justify-content:space-between;margin-bottom:4px}
+.svc{display:flex;align-items:center;gap:10px;padding:7px 8px;font-size:13px;border-top:1px solid var(--line)}
+.svc:first-of-type{border-top:0}
+.svc .play{color:var(--faint);font-size:9px}
+.svc .cmd{color:var(--faint);font-size:12px}
+.svc .end{margin-left:auto;font-size:12px}
 
-section{padding:52px 0;border-bottom:1px solid var(--line)}
-h2{font-size:14px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin:0 0 26px;
-   display:flex;align-items:center;gap:14px;color:var(--ink)}
-h2 i{font-style:normal;color:var(--accent)}
-h2::after{content:"";flex:1;height:1px;background:var(--line)}
+section{padding:62px 0;border-top:1px solid var(--line)}
+h2{font-size:clamp(22px,3vw,28px);letter-spacing:-.6px;margin:0 0 8px;font-weight:600}
+.sub{color:var(--dim);margin:0 0 32px;max-width:620px}
+.feats{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:28px 34px}
+.feat h3{margin:0 0 5px;font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px}
+.feat p{margin:0;color:var(--dim);font-size:14px}
+.feat svg{flex:none;color:var(--accent)}
 
-dl{margin:0;display:grid;grid-template-columns:168px 1fr;gap:0}
-dt{padding:14px 0;border-top:1px solid var(--line);font-weight:700}
-dd{padding:14px 0;border-top:1px solid var(--line);margin:0;color:var(--dim)}
-dd b{color:var(--ink);font-weight:400}
-dl dt:first-of-type,dl dd:first-of-type{border-top:0}
-@media (max-width:620px){
-  dl{grid-template-columns:1fr}
-  dt{padding-bottom:2px;border-bottom:0}
-  dd{padding-top:4px;border-top:0}
-  dt+dd{border-top:0}
-}
+.steps{display:flex;flex-direction:column;gap:22px;margin-bottom:26px}
+.step{display:grid;grid-template-columns:26px 1fr;gap:14px}
+.step span{color:var(--accent);font-size:13px;font-variant-numeric:tabular-nums;padding-top:2px}
+.step h3{margin:0 0 4px;font-size:15px;font-weight:600}
+.step p{margin:0;color:var(--dim);font-size:14px}
 
-.rows{display:grid;gap:0}
-.row{display:grid;grid-template-columns:28px 1fr;gap:16px;padding:16px 0;border-top:1px solid var(--line)}
-.row:first-child{border-top:0}
-.row .n{color:var(--accent)}
-.row h3{margin:0 0 5px;font-size:14px;font-weight:700}
-.row p{margin:0;color:var(--dim);max-width:72ch}
+pre{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;overflow-x:auto;
+    font-family:var(--mono);font-size:13px;line-height:1.7;margin:0;color:var(--dim)}
+pre b{color:var(--ink);font-weight:400}
+pre .g{color:var(--green)}
+pre .a{color:var(--accent)}
+pre .c{color:var(--faint)}
 
-pre.block{border:1px solid var(--line);padding:16px;overflow-x:auto;margin:22px 0 0;
-          font-size:12.5px;line-height:1.75;color:var(--dim);white-space:pre}
-pre.block b{color:var(--ink);font-weight:400}
+.install{display:grid;gap:16px}
+.after{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:22px;margin-top:6px}
+.after b{display:block;font-size:14px;margin-bottom:3px}
+.after div{color:var(--dim);font-size:14px}
 
-.install{display:grid;gap:14px}
-.cmd{border:1px solid var(--line);padding:14px 16px;overflow-x:auto;white-space:pre}
-.cmd .p{color:var(--accent)}
-.after{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:0 28px}
-.after div{padding:14px 0;border-top:1px solid var(--line);color:var(--dim);font-size:13px}
-.after b{display:block;color:var(--ink);font-weight:700;margin-bottom:3px}
+footer{border-top:1px solid var(--line);padding:26px 0 52px;color:var(--faint);font-size:13px;
+       display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+footer a{color:var(--faint)}
 
-footer{padding:26px 0 60px;color:var(--dim);font-size:13px;display:flex;
-       justify-content:space-between;gap:14px;flex-wrap:wrap}
+@media (max-width:620px){.mock{grid-template-columns:1fr}.mock .side{display:none}}
 </style>
 </head>
 <body>
-<div class="screen">
-<div class="chrome"><i></i><i></i><i></i><span>harbor — ~/projects</span></div>
 <div class="wrap">
 
-<header class="top">
-  <b>harbor<span class="acc">/</span></b>
-  <nav>
-    <a href="#what">what</a>
-    <a href="#how">how</a>
-    <a href="#install">install</a>
-    <a href="https://github.com/erenbekman/harbor">github</a>
-  </nav>
+<nav>
+  <a class="brand" href="#top">
+    <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.2" r="3" fill="#0a84ff"/><g stroke="#e9eaec" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M12 11.2v4.4"/><path d="M3.2 17.6c2-1.6 4-1.6 6 0s4 1.6 6 0 3.8-1.6 5.6 0"/></g></svg>
+    Harbor
+  </a>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#how">How it works</a>
+    <a href="#install">Install</a>
+    <a href="https://github.com/erenbekman/harbor">GitHub</a>
+  </div>
+</nav>
+
+<header id="top">
+  <h1>Quit Harbor.<br><span>Your dev servers keep running.</span></h1>
+  <p class="lede">
+    A small native macOS app for the thing you do before writing any code: starting
+    <code>npm run dev</code> in one folder, <code>php artisan serve</code> and a queue worker in another —
+    and then remembering which of them is still up.
+  </p>
+  <div class="cta">
+    <a class="btn btn-primary" href="https://github.com/erenbekman/harbor/releases/latest">Download for macOS</a>
+    <a class="btn btn-ghost" href="https://github.com/erenbekman/harbor">View source</a>
+  </div>
+  <p class="facts">macOS 14+ · Apple silicon &amp; Intel · Swift and SwiftUI, no dependencies · needs tmux</p>
+
+  <div class="shot">
+    <img src="harbor.png" alt="The Harbor window" onerror="this.remove()">
+    <div class="mock">
+      <div class="bar"><i class="dot" style="background:#ff5f57"></i><i class="dot" style="background:#febc2e"></i><i class="dot" style="background:#28c840"></i></div>
+      <aside class="side">
+        <div class="srow on"><i style="background:#ff9f0a"></i>nott<b>2</b></div>
+        <div class="srow"><i style="background:#0a84ff"></i>ustad</div>
+        <div class="srow"><i style="background:#ffd60a"></i>medvise</div>
+      </aside>
+      <main class="main">
+        <h3>nott</h3>
+        <div class="crumbs">Documents › GitHub › nott</div>
+        <div class="label"><span>Services</span><span style="font-weight:400">2 of 4 running</span></div>
+        <div class="svc"><span class="play">■</span>backend<span class="cmd">npm run dev</span><span class="end" style="color:var(--green)">:4000</span></div>
+        <div class="svc"><span class="play">■</span>client<span class="cmd">npm run dev</span><span class="end" style="color:var(--green)">:3000</span></div>
+        <div class="svc" style="color:var(--dim)"><span class="play">▶</span>horizon<span class="cmd">php artisan horizon</span></div>
+        <div class="svc" style="color:var(--dim)"><span class="play">▶</span>admin<span class="cmd">npm run dev</span><span class="end" style="color:var(--red)">exit 1</span></div>
+      </main>
+    </div>
+  </div>
 </header>
 
-<div class="hero">
-  <h1>quit harbor.<br>your dev servers keep running<span class="cursor"></span></h1>
-  <p>
-    <b>harbor</b> is a small native macOS app for the thing you do before you write any code:
-    starting <b>npm run dev</b> in one folder, <b>php artisan serve</b> and a queue worker in
-    another — and then remembering which of them is still running. Every service runs inside its
-    own <b>tmux</b> session, so closing the app, or updating it, stops nothing.
-  </p>
-  <div class="run">
-    <div><span class="acc">$</span> git clone https://github.com/erenbekman/harbor.git</div>
-    <div><span class="acc">$</span> cd harbor &amp;&amp; ./install.sh</div>
+<section id="features">
+  <h2>What it does</h2>
+  <p class="sub">Everything here exists because the alternative was four terminal tabs and a guess.</p>
+  <div class="feats">
+    <div class="feat">
+      <h3>Survives the app</h3>
+      <p>Every service is a tmux session. Quit Harbor and your dev server keeps serving; open it again and
+         it is adopted, not started twice. An update never touches them.</p>
+    </div>
+    <div class="feat">
+      <h3>Ports are measured</h3>
+      <p>You never type a port into Harbor. It walks the pane's process tree and asks <code>lsof</code> what is
+         actually listening — so <code>:3000</code> on a row means something really is on 3000.</p>
+    </div>
+    <div class="feat">
+      <h3>Magic</h3>
+      <p>For what pattern matching cannot see — a monorepo, a PM2 config, a socket server, a cron process —
+         Claude reads the project and proposes its services, naming the file each came from. You tick the ones
+         you want.</p>
+    </div>
+    <div class="feat">
+      <h3>The edge strip</h3>
+      <p>A column of project chips on the right edge of the screen, above every app and on every Space. Hover
+         for the services, press play without losing focus in your editor.</p>
+    </div>
+    <div class="feat">
+      <h3>Crashes stay readable</h3>
+      <p>A service that exits keeps its output and exit code. If the port was taken, the row names the process
+         holding it and offers to kill it — optionally restarting itself three times first.</p>
+    </div>
+    <div class="feat">
+      <h3>⌃⌘H</h3>
+      <p>From anywhere: type a project or service name, Enter starts or stops it. The same list lives in the
+         menu bar, under a buoy that fills in while something is running.</p>
+    </div>
   </div>
-  <div class="btns">
-    <a class="btn key" href="https://github.com/erenbekman/harbor/releases/latest">[ download ]</a>
-    <a class="btn" href="https://github.com/erenbekman/harbor">[ source ]</a>
-  </div>
-  <div class="facts">
-    <span><b>macOS 14+</b> · apple silicon &amp; intel</span>
-    <span><b>~0.8 MB</b> download</span>
-    <span><b>swift + swiftui</b>, no dependencies</span>
-    <span>needs <b>tmux</b></span>
-  </div>
-</div>
-
-<div class="art">
-<img class="shot" src="harbor.png" alt="The harbor window: projects on the left, services with their commands and ports on the right" onerror="this.remove()">
-<pre>
-┌──────────────┬───────────────────────────────────────────────────┐
-│              │  ▶  ■                                <span class="acc">✦</span>    +       │
-│ <b>●</b> nott     <span class="g">2</span> ┼───────────────────────────────────────────────────│
-│ ● ustad      │ <b>nott</b>                                              │
-│ ● medvise    │ Documents › GitHub › <b>nott</b>                         │
-│              │                                                   │
-│              │ Services                         2 of 4 running   │
-│              │  ■  backend    npm run dev              <span class="g">:4000</span>  <span class="acc">↓</span>  │
-│              │  ───────────────────────────────────────────────  │
-│              │  ■  client     npm run dev              <span class="g">:3000</span>  <span class="acc">↓</span>  │
-│              │  ───────────────────────────────────────────────  │
-│              │  ▶  horizon    php artisan horizon             <span class="acc">↓</span>  │
-│              │  ───────────────────────────────────────────────  │
-│              │  ▶  admin      npm run dev            <span class="r">exit 1</span>   <span class="acc">↓</span>  │
-│ + Add project│                                                   │
-└──────────────┴───────────────────────────────────────────────────┘
-</pre>
-<p class="cap">The window is where you set things up: a source list of projects on the left, the folder as a
-path control you can click through, and every service as a row with its command, its port and the arrow that
-opens its output. Start all and stop all live in the toolbar.</p>
-<pre class="wide" style="margin-top:26px">
- ┌──────┐          ┌──────────────────────┐
- │  <b>N</b>   │          │         ───          │
- │      │          │ <b>nott</b>       <span class="g">2 running</span> │
- │  U   │   hover  │   ■ backend    <span class="g">:4000</span> │
- │      │ <span class="acc">───────▶</span> │   ■ client     <span class="g">:3000</span> │
- │  M   │          │   ▶ horizon  stopped │
- │      │          │ ustad                │
- │      │          │   ▶ serve   <span class="y">starting</span> │
- └──────┘          └──────────────────────┘
-</pre>
-<p class="cap">The strip is where the rest of the day happens. Closed, it is a column of project chips, the ones with something running marked in the system accent. Hover and it opens: the chip flies into its row and every service comes with it, each with its port. Pressing play never takes focus from your editor.</p>
-</div>
-
-<section id="what">
-  <h2><i>01</i> what it does</h2>
-  <dl>
-    <dt>tmux</dt>
-    <dd>Every service is a tmux session, so they outlive the app. Quit harbor and your dev server
-        keeps serving; open it again and it is <b>adopted</b>, not started twice. An update never
-        touches them.</dd>
-
-    <dt>measured ports</dt>
-    <dd>You never type a port into harbor. It walks the pane's process tree and asks <b>lsof</b> what
-        is actually listening — so <b>:3000</b> on a row means something really is on 3000, and the
-        row offers to open it.</dd>
-
-    <dt>magic</dt>
-    <dd>For what pattern matching cannot see — a monorepo, a PM2 <b>ecosystem.config.js</b>, a socket
-        server, a cron process — <b>claude -p</b> reads the project with Read, Glob and Grep, every
-        other tool taken away, and answers with services and the file each came from. A checklist you
-        approve; nothing is added on its own.</dd>
-
-    <dt>the edge strip</dt>
-    <dd>A column of project chips on the right edge of the screen, above every app and on every
-        Space. Hover for the services, press play without losing focus in your editor, drag it where
-        you want it.</dd>
-
-    <dt>crashes</dt>
-    <dd>A service that exits keeps its output and its exit code instead of vanishing. If the port was
-        taken, the row names the process holding it and offers to kill it. Optionally it restarts
-        itself, three times, then leaves it alone.</dd>
-
-    <dt>⌃⌘H</dt>
-    <dd>From anywhere: type a project or service name, Enter starts or stops it. No window, no mouse.
-        The same list lives in the menu bar, under a buoy that fills in while something is running — and harbor updates itself from its own releases.</dd>
-  </dl>
-
-<pre class="block"><span class="acc">✦ magic</span> <span class="dim">· nott · 20 seconds · read-only</span>
-
-  <b>backend </b>  npm run dev   <span class="dim">dir</span> note-app-backend   <span class="dim">health</span> /health
-  <b>frontend</b>  npm run dev   <span class="dim">dir</span> nott_frontend-main
-  <b>client  </b>  npm run dev   <span class="dim">dir</span> note-app-client
-  <b>admin   </b>  npm run dev   <span class="dim">dir</span> nott-admin-panel
-  <b>landing </b>  npm run dev   <span class="dim">dir</span> nott-landing-page
-
-  <span class="acc">note</span>  the backend needs MySQL (sequelize) and Redis (bull), migrations via npm run migrate
-  <span class="acc">note</span>  nott_frontend-main needs Node 22 (.nvmrc) — Node 26 breaks vite-node
-  <span class="acc">note</span>  all four Nuxt apps default to port 3000, so they collide if started together</pre>
 </section>
 
 <section id="how">
-  <h2><i>02</i> how it works</h2>
-  <div class="rows">
-    <div class="row">
-      <span class="n">01</span>
-      <div>
-        <h3>one tmux session per service</h3>
-        <p>Named from a stable hash of the project path, so the same folder maps to the same session
-           on every launch. That is how harbor finds services it did not start in this run instead of
-           starting a second copy of your dev server.</p>
-      </div>
-    </div>
-    <div class="row">
-      <span class="n">02</span>
-      <div>
-        <h3>one poll answers for everything</h3>
-        <p>Every two seconds: one <b>list-panes</b> for liveness and exit codes, one <b>ps</b> for the
-           process tree, one <b>lsof</b> for the ports. No per-service polling, and nothing is drawn
-           again unless the value actually moved.</p>
-      </div>
-    </div>
-    <div class="row">
-      <span class="n">03</span>
-      <div>
-        <h3>a port is not an answer</h3>
-        <p>Give a service a health path and the dot turns green only when the URL responds — not when
-           the port opens. While a framework is still booting, yellow is the truth.</p>
-      </div>
-    </div>
+  <h2>How it works</h2>
+  <p class="sub">Three decisions the whole app rests on.</p>
+  <div class="steps">
+    <div class="step"><span>01</span><div>
+      <h3>One tmux session per service</h3>
+      <p>Named from a stable hash of the project path, so the same folder maps to the same session on every
+         launch. That is how Harbor finds services it did not start in this run instead of starting a second
+         copy of your dev server.</p></div></div>
+    <div class="step"><span>02</span><div>
+      <h3>One poll answers for everything</h3>
+      <p>Every two seconds: one <code>list-panes</code> for liveness and exit codes, one <code>ps</code> for the
+         process tree, one <code>lsof</code> for the ports. Nothing is drawn again unless the value moved.</p></div></div>
+    <div class="step"><span>03</span><div>
+      <h3>A port is not an answer</h3>
+      <p>Give a service a health path and the dot turns green only when the URL responds — not when the port
+         opens. While a framework is still booting, yellow is the truth.</p></div></div>
   </div>
-
-<pre class="block"><span class="dim"># a service, really</span>
+<pre><span class="c"># a service, really</span>
 tmux -S /tmp/harbor-501.sock new-session -d -s hb-3b92hjqj-5de35ab8 \
   <b>'cd backend &amp;&amp; npm run dev'</b>
 
-<span class="dim"># what the dot means</span>
-<span class="g">●</span> <b>running </b>  pane alive, health answering, :4000
-<span class="y">●</span> <b>starting</b>  pane alive, nothing listening yet
-<span class="r">✕</span> <b>exited  </b>  kept on screen with its exit code
-○ <b>stopped </b>  not running</pre>
+<span class="c"># what Magic answers, in 20 seconds</span>
+<b>backend </b>  npm run dev   <span class="c">dir</span> note-app-backend   <span class="c">health</span> /health
+<b>client  </b>  npm run dev   <span class="c">dir</span> note-app-client
+<span class="a">note</span>  the backend needs MySQL and Redis, migrations via npm run migrate
+<span class="a">note</span>  all four Nuxt apps default to port 3000, so they collide if started together</pre>
 </section>
 
 <section id="install">
-  <h2><i>03</i> install</h2>
+  <h2>Install</h2>
+  <p class="sub">Clone and run one script. It installs tmux with Homebrew if you do not have it.</p>
   <div class="install">
-    <div class="cmd"><span class="p">$</span> git clone https://github.com/erenbekman/harbor.git
-<span class="p">$</span> cd harbor
-<span class="p">$</span> ./install.sh</div>
-    <p class="dim" style="margin:0;max-width:70ch">Builds a release bundle, installs it into
-      /Applications and launches it. Installs tmux with Homebrew if you do not have it. The app is
-      ad-hoc signed, so the first launch may need right-click → Open.</p>
+<pre>git clone https://github.com/erenbekman/harbor.git
+cd harbor
+./install.sh</pre>
     <div class="after">
-      <div><b>add a folder</b>harbor reads it and offers what it finds — npm, pnpm, yarn, bun, artisan,
-        django, docker compose.</div>
-      <div><b>or press magic</b>claude reads the project for everything else.</div>
-      <div><b>it updates itself</b>settings → about checks the latest release and installs it; your
-        services keep running through it.</div>
+      <div><b>Add a folder</b>Harbor reads it and offers what it finds — npm, pnpm, yarn, bun, artisan,
+        Django, docker compose.</div>
+      <div><b>Or press Magic</b>Claude reads the project for everything the patterns miss.</div>
+      <div><b>It updates itself</b>Settings → About checks the latest release and installs it; your services
+        keep running through it.</div>
     </div>
   </div>
 </section>
 
 <footer>
-  <span>harbor — a macOS app by <a href="https://github.com/erenbekman">erenbekman</a></span>
-  <span><a href="https://github.com/erenbekman/harbor">source</a> ·
-        <a href="https://github.com/erenbekman/harbor/releases">releases</a> ·
-        <a href="https://github.com/erenbekman/harbor/issues">issues</a></span>
+  <span>Harbor — a macOS app by <a href="https://github.com/erenbekman">erenbekman</a>.</span>
+  <span><a href="https://github.com/erenbekman/harbor">Source</a> ·
+        <a href="https://github.com/erenbekman/harbor/releases">Releases</a> ·
+        <a href="https://github.com/erenbekman/harbor/issues">Issues</a></span>
 </footer>
 
-</div>
 </div>
 </body>
 </html>
