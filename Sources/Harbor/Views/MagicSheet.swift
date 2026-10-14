@@ -44,6 +44,7 @@ struct MagicSheet: View {
                     .keyboardShortcut(.cancelAction)
                 if case .done = state {
                     Button("Add \(picked.count)") { add() }
+                        .buttonStyle(.borderedProminent)
                         .keyboardShortcut(.defaultAction)
                         .disabled(picked.isEmpty)
                 }

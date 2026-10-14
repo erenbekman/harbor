@@ -25,8 +25,8 @@ struct StripView: View {
 
     private var panel: some View {
         let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
-        return shape
-            .fill(Theme.base.opacity(0.96))
+        return VisualEffect(material: .popover, blending: .behindWindow)
+            .clipShape(shape)
             .overlay(shape.strokeBorder(Theme.line, lineWidth: 0.5))
             .shadow(color: .black.opacity(0.28), radius: 14, x: -2, y: 6)
     }
@@ -46,7 +46,7 @@ struct StripView: View {
     private func chip(_ project: Project) -> some View {
         let live = running(project) > 0
         return RoundedRectangle(cornerRadius: 8, style: .continuous)
-            .fill(live ? Theme.control : Theme.raised)
+            .fill(live ? Theme.control : Theme.hover)
             .frame(width: Strip.chipSize, height: Strip.chipSize)
             .overlay(
                 Text(project.badge)
@@ -90,8 +90,7 @@ struct StripView: View {
 
     private var empty: some View {
         VStack(spacing: 6) {
-            Image(systemName: "arrow.left.arrow.right")
-                .font(.system(size: 15))
+            Image(nsImage: Mark.image(size: 20, filled: false))
                 .foregroundStyle(Theme.muted)
             Text("No projects yet")
                 .font(.system(size: 11))
@@ -141,7 +140,7 @@ struct StripView: View {
             }
             Image(systemName: "arrow.down")
                 .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(Theme.muted.opacity(0.8))
+                .foregroundStyle(Theme.faint)
                 .rotationEffect(.degrees(folded ? 0 : 180))
         }
         .padding(.horizontal, 12)
@@ -164,7 +163,7 @@ struct StripView: View {
                 HStack {
                     Text("No services")
                         .font(.system(size: 11))
-                        .foregroundStyle(Theme.muted.opacity(0.8))
+                        .foregroundStyle(Theme.faint)
                     Spacer(minLength: 0)
                 }
                 .padding(.leading, 33)
@@ -224,7 +223,7 @@ struct StripView: View {
         case .stopped:
             Text("stopped")
                 .font(.system(size: 11))
-                .foregroundStyle(Theme.muted.opacity(0.7))
+                .foregroundStyle(Theme.faint)
         }
     }
 

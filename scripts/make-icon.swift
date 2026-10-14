@@ -1,4 +1,3 @@
-#!/usr/bin/env swift
 import AppKit
 
 let sizes: [(name: String, px: Int)] = [
@@ -17,34 +16,27 @@ func color(_ hex: UInt32, _ alpha: CGFloat = 1) -> NSColor {
 
 let plateTop = color(0x3C424B)
 let plateBottom = color(0x1B1F24)
+let accent = color(0x0A84FF)
+let ink = color(0xFFFFFF, 0.95)
 
 func draw(_ px: Int) -> NSImage {
     let size = CGFloat(px)
     let image = NSImage(size: NSSize(width: size, height: size))
     image.lockFocus()
-    let s = size / 1024
 
-    let plate = NSBezierPath(roundedRect: NSRect(x: 100 * s, y: 100 * s, width: 824 * s, height: 824 * s),
-                             xRadius: 185 * s, yRadius: 185 * s)
+    let plate = NSBezierPath(roundedRect: NSRect(x: 100 * size / 1024, y: 100 * size / 1024,
+                                                 width: 824 * size / 1024, height: 824 * size / 1024),
+                             xRadius: 185 * size / 1024, yRadius: 185 * size / 1024)
     NSGradient(starting: plateTop, ending: plateBottom)?.draw(in: plate, angle: -90)
 
-    func arrow(y: CGFloat, from: CGFloat, to: CGFloat) -> NSBezierPath {
-        let path = NSBezierPath()
-        path.move(to: NSPoint(x: from * s, y: y * s))
-        path.line(to: NSPoint(x: to * s, y: y * s))
-        let sign: CGFloat = to > from ? -1 : 1
-        path.move(to: NSPoint(x: (to + sign * 82) * s, y: (y + 82) * s))
-        path.line(to: NSPoint(x: to * s, y: y * s))
-        path.line(to: NSPoint(x: (to + sign * 82) * s, y: (y - 82) * s))
-        path.lineWidth = 52 * s
-        path.lineCapStyle = .round
-        path.lineJoinStyle = .round
-        return path
-    }
-
-    color(0xFFFFFF, 0.95).setStroke()
-    arrow(y: 596, from: 300, to: 690).stroke()
-    arrow(y: 428, from: 724, to: 334).stroke()
+    let inset = size * 0.22
+    let markSize = size - inset * 2
+    NSGraphicsContext.current?.saveGraphicsState()
+    let shift = NSAffineTransform()
+    shift.translateX(by: inset, yBy: inset)
+    shift.concat()
+    Mark.draw(size: markSize, filled: true, stroke: ink, head: accent)
+    NSGraphicsContext.current?.restoreGraphicsState()
 
     image.unlockFocus()
     return image

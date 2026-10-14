@@ -1,6 +1,56 @@
 import SwiftUI
 import AppKit
 
+private struct FieldBox<Content: View>: View {
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        content
+            .padding(.horizontal, 9)
+            .frame(height: 26)
+            .background(
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .stroke(Theme.line, lineWidth: 1)
+            )
+    }
+}
+
+private struct FormRow<Content: View>: View {
+    let label: String
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 12) {
+            Text(label)
+                .font(.system(size: 12))
+                .foregroundStyle(Theme.muted)
+                .frame(width: 92, alignment: .leading)
+            content
+            Spacer(minLength: 0)
+        }
+    }
+}
+
+private struct SheetFrame<Content: View, Actions: View>: View {
+    let title: String
+    @ViewBuilder var content: Content
+    @ViewBuilder var actions: Actions
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text(title)
+                .font(.system(size: 15, weight: .semibold))
+            VStack(alignment: .leading, spacing: 10) { content }
+            Divider().opacity(0.6)
+            HStack(spacing: 8) {
+                Spacer()
+                actions
+            }
+        }
+        .padding(18)
+    }
+}
+
 struct ProjectSheet: View {
     let project: Project?
     @EnvironmentObject private var store: Store
@@ -13,38 +63,44 @@ struct ProjectSheet: View {
     @State private var picked: Set<UUID> = []
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text(project == nil ? "Add project" : "Edit project")
-                .font(.system(size: 15, weight: .semibold))
-
-            Form {
-                TextField("Name", text: $name)
-                HStack(spacing: 6) {
-                    TextField("Folder", text: $path)
-                    Button("Choose…", action: choose)
-                }
-                LabeledContent("Color") {
-                    HStack(spacing: 7) {
-                        ForEach(Theme.tints.indices, id: \.self) { index in
-                            Circle()
-                                .fill(Theme.tint(index))
-                                .frame(width: 18, height: 18)
-                                .overlay(
-                                    Circle().stroke(Color.primary.opacity(tint == index ? 0.85 : 0),
-                                                    lineWidth: 2)
-                                )
-                                .onTapGesture { tint = index }
-                        }
-                    }
+        SheetFrame(title: project == nil ? "Add project" : "Edit project") {
+            FormRow(label: "Name") {
+                FieldBox {
+                    TextField("", text: $name, prompt: Text("nott"))
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 13))
                 }
             }
-            .formStyle(.grouped)
+            FormRow(label: "Folder") {
+                FieldBox {
+                    TextField("", text: $path, prompt: Text("~/Documents/GitHub/nott"))
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 12))
+                }
+                Button("Choose…", action: choose)
+                    .controlSize(.small)
+            }
+            FormRow(label: "Color") {
+                HStack(spacing: 7) {
+                    ForEach(Theme.tints.indices, id: \.self) { index in
+                        Circle()
+                            .fill(Theme.tint(index))
+                            .frame(width: 16, height: 16)
+                            .overlay(
+                                Circle().stroke(Color.primary.opacity(tint == index ? 0.9 : 0), lineWidth: 2)
+                                    .padding(-3)
+                            )
+                            .onTapGesture { tint = index }
+                    }
+                }
+                .frame(height: 26)
+            }
 
             if !detected.isEmpty {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Services found in this folder")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(Theme.secondary)
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("Found in this folder")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Theme.muted)
                     ForEach(detected) { service in
                         Toggle(isOn: Binding(
                             get: { picked.contains(service.id) },
@@ -53,29 +109,26 @@ struct ProjectSheet: View {
                             }
                         )) {
                             HStack(spacing: 6) {
-                                Text(service.name).font(.system(size: 12, weight: .medium))
+                                Text(service.name).font(.system(size: 12))
                                 Text(service.command)
-                                    .font(.system(size: 11, design: .monospaced))
-                                    .foregroundStyle(Theme.secondary)
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(Theme.faint)
                             }
                         }
                         .toggleStyle(.checkbox)
                     }
                 }
-                .padding(.horizontal, 4)
+                .padding(.top, 2)
             }
-
-            HStack {
-                Spacer()
-                Button("Cancel") { dismiss() }
-                    .keyboardShortcut(.cancelAction)
-                Button(project == nil ? "Add" : "Save", action: save)
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || path.isEmpty)
-            }
+        } actions: {
+            Button("Cancel") { dismiss() }
+                .keyboardShortcut(.cancelAction)
+            Button(project == nil ? "Add" : "Save", action: save)
+                .buttonStyle(.borderedProminent)
+                .keyboardShortcut(.defaultAction)
+                .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || path.isEmpty)
         }
-        .padding(18)
-        .frame(width: 460)
+        .frame(width: 470)
         .onAppear {
             if let project {
                 name = project.name
@@ -130,39 +183,55 @@ struct ServiceSheet: View {
     @State private var health = ""
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text(service == nil ? "Add service" : "Edit service")
-                .font(.system(size: 15, weight: .semibold))
-
-            Form {
-                TextField("Name", text: $name, prompt: Text("dev"))
-                TextField("Command", text: $command, prompt: Text("npm run dev"))
-                    .font(.system(size: 12, design: .monospaced))
-                TextField("Subfolder", text: $dir, prompt: Text("optional — e.g. frontend"))
-                TextField("Health check", text: $health,
-                          prompt: Text("optional — /health, or a full URL"))
-                Toggle("Start automatically when Harbor opens", isOn: $autoStart)
-                Toggle("Restart if it crashes", isOn: $autoRestart)
+        SheetFrame(title: service == nil ? "Add service" : "Edit service") {
+            FormRow(label: "Name") {
+                FieldBox {
+                    TextField("", text: $name, prompt: Text("dev"))
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 13))
+                }
             }
-            .formStyle(.grouped)
+            FormRow(label: "Command") {
+                FieldBox {
+                    TextField("", text: $command, prompt: Text("npm run dev"))
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 12, design: .monospaced))
+                }
+            }
+            FormRow(label: "Subfolder") {
+                FieldBox {
+                    TextField("", text: $dir, prompt: Text("optional — frontend"))
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 12))
+                }
+            }
+            FormRow(label: "Health check") {
+                FieldBox {
+                    TextField("", text: $health, prompt: Text("optional — /health"))
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 12))
+                }
+            }
 
-            Text("Runs in \(project.name) with your login shell, inside tmux — it keeps going when Harbor is closed.")
+            Divider().opacity(0.6).padding(.vertical, 2)
+
+            Toggle("Start automatically when Harbor opens", isOn: $autoStart)
+            Toggle("Restart if it crashes", isOn: $autoRestart)
+
+            Text("Runs in \(project.name) through your login shell, inside tmux — it keeps going when Harbor is closed.")
                 .font(.system(size: 11))
-                .foregroundStyle(Theme.secondary)
+                .foregroundStyle(Theme.faint)
                 .fixedSize(horizontal: false, vertical: true)
-
-            HStack {
-                Spacer()
-                Button("Cancel") { dismiss() }
-                    .keyboardShortcut(.cancelAction)
-                Button(service == nil ? "Add" : "Save", action: save)
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty
-                              || command.trimmingCharacters(in: .whitespaces).isEmpty)
-            }
+        } actions: {
+            Button("Cancel") { dismiss() }
+                .keyboardShortcut(.cancelAction)
+            Button(service == nil ? "Add" : "Save", action: save)
+                .buttonStyle(.borderedProminent)
+                .keyboardShortcut(.defaultAction)
+                .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty
+                          || command.trimmingCharacters(in: .whitespaces).isEmpty)
         }
-        .padding(18)
-        .frame(width: 460)
+        .frame(width: 470)
         .onAppear {
             guard let service else { return }
             name = service.name

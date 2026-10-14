@@ -8,7 +8,9 @@ APP="Harbor.app"
 BIN=".build/release/Harbor"
 
 echo "→ generating icon…"
-swift scripts/make-icon.swift >/dev/null
+mkdir -p .build && cp scripts/make-icon.swift .build/main.swift
+swiftc -O -o .build/make-icon .build/main.swift Sources/Harbor/Core/Mark.swift >/dev/null
+./.build/make-icon >/dev/null
 iconutil -c icns AppIcon.iconset -o AppIcon.icns
 
 echo "→ building (release)…"

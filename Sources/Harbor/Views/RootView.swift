@@ -42,9 +42,9 @@ struct ProjectSidebar: View {
                     .foregroundStyle(Theme.muted)
             }
         }
-        .tint(Theme.control)
-        .scrollContentBackground(.hidden)
-        .background(Theme.sidebar)
+        .safeAreaInset(edge: .top, spacing: 0) {
+            Color.clear.frame(height: 10)
+        }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             HStack(spacing: 0) {
                 Button { store.requested = .newProject } label: {
@@ -63,7 +63,7 @@ struct ProjectSidebar: View {
             }
             .padding(.horizontal, 8)
             .frame(height: 28)
-            .background(Theme.sidebar)
+            .background(.bar)
             .overlay(alignment: .top) { Rectangle().fill(Theme.line).frame(height: 0.5) }
         }
     }
@@ -128,7 +128,7 @@ struct DetailContainer: View {
             }
         }
         .frame(minWidth: 460, minHeight: 360)
-        .background(Theme.base)
+        .background(ContentPlane())
         .onChange(of: store.requested) { _, action in
             guard let action else { return }
             store.requested = nil
@@ -156,13 +156,24 @@ struct DetailContainer: View {
     }
 }
 
+private struct ContentPlane: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = .contentBackground
+        view.blendingMode = .behindWindow
+        view.state = .followsWindowActiveState
+        return view
+    }
+
+    func updateNSView(_ view: NSVisualEffectView, context: Context) {}
+}
+
 private struct EmptyProjects: View {
     let add: () -> Void
 
     var body: some View {
         VStack(spacing: 10) {
-            Image(systemName: "arrow.left.arrow.right")
-                .font(.system(size: 26, weight: .light))
+            Image(nsImage: Mark.image(size: 34, filled: false))
                 .foregroundStyle(.tertiary)
             Text("No projects yet")
                 .font(.system(size: 15, weight: .medium))

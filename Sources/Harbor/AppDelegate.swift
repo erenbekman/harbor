@@ -55,6 +55,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         sidebar.minimumThickness = 180
         sidebar.maximumThickness = 300
         sidebar.canCollapse = true
+        sidebar.allowsFullHeightLayout = false
 
         let detail = NSSplitViewItem(viewController: NSHostingController(
             rootView: DetailContainer().environmentObject(store).environmentObject(runner)))
@@ -65,7 +66,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         splitController = split
 
         let window = NSWindow(contentViewController: split)
-        window.appearance = NSAppearance(named: .darkAqua)
         window.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
         window.title = "Harbor"
         window.titleVisibility = .hidden
@@ -239,7 +239,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         tabs.addTabViewItem(about)
 
         let window = NSWindow(contentViewController: tabs)
-        window.appearance = NSAppearance(named: .darkAqua)
         window.styleMask = [.titled, .closable]
         window.title = "Harbor Settings"
         window.isReleasedWhenClosed = false
@@ -282,10 +281,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
     }
 
     private static func statusImage(running: Bool) -> NSImage? {
-        let name = running ? "arrow.left.arrow.right.circle.fill" : "arrow.left.arrow.right"
-        let image = NSImage(systemSymbolName: name, accessibilityDescription: "Harbor")
-        image?.isTemplate = true
-        return image
+        Mark.image(size: 18, filled: running)
     }
 
     private func refreshStatusImage() {

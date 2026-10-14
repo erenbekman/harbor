@@ -10,15 +10,15 @@ extension Color {
 }
 
 enum Theme {
-    static let base = Color(hex: 0x272A2C)
-    static let raised = Color(hex: 0x313335)
-    static let sidebar = Color(hex: 0x2B3135)
-    static let line = Color(hex: 0x3C3F41)
-    static let control = Color(hex: 0x484D4E)
-    static let button = Color(hex: 0x505050)
-    static let ink = Color(hex: 0xF2F2F5)
-    static let muted = Color(hex: 0x9A9DA0)
-    static let accent = Color(hex: 0x0091FF)
+    static let cast = Color(hex: 0x6C7689)
+    static let raised = cast.opacity(0.16)
+    static let line = cast.opacity(0.3)
+    static let control = cast.opacity(0.34)
+    static let hover = cast.opacity(0.2)
+    static let ink = Color(nsColor: .labelColor)
+    static let muted = Color(nsColor: .secondaryLabelColor)
+    static let faint = Color(nsColor: .tertiaryLabelColor)
+    static let accent = Color.accentColor
 
     static let railWidth: CGFloat = 78
     static let railExpandedWidth: CGFloat = 196

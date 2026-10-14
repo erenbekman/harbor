@@ -3,19 +3,19 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>harbor — your projects' dev servers, one click away</title>
+<title>harbor — your dev servers keep running</title>
 <meta name="description" content="A native macOS app that starts and stops each project's dev servers. Services run in tmux, so they outlive the app.">
 <meta property="og:title" content="harbor">
-<meta property="og:description" content="Your projects' dev servers, one click away. Services run in tmux, so they outlive the app.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2325292f'/%3E%3Cg stroke='%23f4f2f2' stroke-width='4' stroke-linecap='round' stroke-linejoin='round' fill='none'%3E%3Cpath d='M16 26 H44'/%3E%3Cpath d='M38 20 L44 26 L38 32'/%3E%3Cpath d='M48 40 H20'/%3E%3Cpath d='M26 34 L20 40 L26 46'/%3E%3C/g%3E%3C/svg%3E">
+<meta property="og:description" content="Quit harbor — your dev servers keep running. A small native macOS app that starts and stops each project's services.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%231e2022'/%3E%3Ccircle cx='12' cy='8.2' r='3' fill='%230a84ff'/%3E%3Cg stroke='%23e8e9ea' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' fill='none'%3E%3Cpath d='M12 11.2v4.4'/%3E%3Cpath d='M3.2 17.6c2-1.6 4-1.6 6 0s4 1.6 6 0 3.8-1.6 5.6 0'/%3E%3C/g%3E%3C/svg%3E">
 <style>
 :root{
-  --bg:#1d2128; --ink:#f4f2f2; --dim:#999b9e; --faint:#4c565f; --line:#2c363d;
-  --accent:#ff9e20; --on-accent:#1d2128; --teal:#215e61;
-  --green:#5ce09e; --amber:#e0b05c; --red:#e06e5c;
+  --bg:#1e2022; --ink:#e8e9ea; --dim:#9aa0a6; --faint:#4b5155; --line:#2f3336;
+  --accent:#0a84ff; --on-accent:#ffffff;
+  --green:#30d158; --amber:#ff9f0a; --red:#ff453a;
   --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
 }
-::selection{background:var(--teal);color:var(--ink)}
+::selection{background:var(--accent);color:var(--on-accent)}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{
@@ -68,6 +68,7 @@ h1 .cursor{display:inline-block;width:.55em;height:1em;background:var(--accent);
 .art{padding:34px 0;border-bottom:1px solid var(--line);overflow-x:auto}
 .art pre{margin:0;font-size:clamp(9px,1.35vw,12.5px);line-height:1.45;white-space:pre;color:var(--dim)}
 .art pre.wide{font-size:clamp(11px,1.9vw,15px);line-height:1.5}
+.shot{display:block;width:100%;border:1px solid var(--line);margin-bottom:22px}
 .art pre b{color:var(--ink);font-weight:400}
 .art .cap{margin:18px 0 0;color:var(--dim);font-size:13px;max-width:70ch}
 
@@ -127,11 +128,12 @@ footer{padding:26px 0 60px;color:var(--dim);font-size:13px;display:flex;
 </header>
 
 <div class="hero">
-  <h1>your projects' dev servers,<br>one click away<span class="cursor"></span></h1>
+  <h1>quit harbor.<br>your dev servers keep running<span class="cursor"></span></h1>
   <p>
     <b>harbor</b> is a small native macOS app for the thing you do before you write any code:
     starting <b>npm run dev</b> in one folder, <b>php artisan serve</b> and a queue worker in
-    another — and then remembering which of them is still running.
+    another — and then remembering which of them is still running. Every service runs inside its
+    own <b>tmux</b> session, so closing the app, or updating it, stops nothing.
   </p>
   <div class="run">
     <div><span class="acc">$</span> git clone https://github.com/erenbekman/harbor.git</div>
@@ -150,6 +152,7 @@ footer{padding:26px 0 60px;color:var(--dim);font-size:13px;display:flex;
 </div>
 
 <div class="art">
+<img class="shot" src="harbor.png" alt="The harbor window: projects on the left, services with their commands and ports on the right" onerror="this.remove()">
 <pre>
 ┌──────────────┬───────────────────────────────────────────────────┐
 │              │  ▶  ■                                <span class="acc">✦</span>    +       │
@@ -216,7 +219,7 @@ opens its output. Start all and stop all live in the toolbar.</p>
 
     <dt>⌃⌘H</dt>
     <dd>From anywhere: type a project or service name, Enter starts or stops it. No window, no mouse.
-        The same list lives in the menu bar, and harbor updates itself from its own releases.</dd>
+        The same list lives in the menu bar, under a buoy that fills in while something is running — and harbor updates itself from its own releases.</dd>
   </dl>
 
 <pre class="block"><span class="acc">✦ magic</span> <span class="dim">· nott · 20 seconds · read-only</span>

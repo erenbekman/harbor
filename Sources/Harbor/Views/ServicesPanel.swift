@@ -8,27 +8,33 @@ struct ServicesPanel: View {
     @EnvironmentObject private var runner: Runner
     @State private var expanded: Set<UUID> = []
     @State private var detected: [Service] = []
+    @State private var hovered: UUID?
+    @State private var query = ""
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 0) {
                 header
+                sectionLabel
                 if project.services.isEmpty {
                     emptyState
                 } else {
-                    group(title: "Services", trailing: runningLabel) {
-                        ForEach(Array(project.services.enumerated()), id: \.element.id) { index, service in
-                            if index > 0 { rowDivider }
-                            ServiceRow(project: project,
-                                       service: service,
-                                       expanded: expanded.contains(service.id),
-                                       toggleLog: { toggleLog(service) },
-                                       edit: { sheet = .editService(project, service) })
+                    ForEach(Array(visible.enumerated()), id: \.element.id) { index, service in
+                        if index > 0 {
+                            Rectangle().fill(Theme.line).frame(height: 0.5)
                         }
+                        ServiceRow(project: project,
+                                   service: service,
+                                   expanded: expanded.contains(service.id),
+                                   hovered: hovered == service.id,
+                                   toggleLog: { toggleLog(service) },
+                                   edit: { sheet = .editService(project, service) })
+                            .onHover { inside in hovered = inside ? service.id : (hovered == service.id ? nil : hovered) }
                     }
                 }
             }
-            .padding(16)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 18)
         }
         .onAppear { detected = Store.detectServices(at: project.path) }
     }
@@ -36,66 +42,77 @@ struct ServicesPanel: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 1) {
             Text(project.name)
-                .font(.system(size: 17, weight: .semibold))
+                .font(.system(size: 19, weight: .semibold))
             PathControl(url: URL(fileURLWithPath: project.path))
-                .frame(height: 20)
+                .frame(height: 18)
                 .padding(.leading, -4)
+                .opacity(0.85)
+        }
+        .padding(.bottom, 20)
+    }
+
+    private var sectionLabel: some View {
+        HStack(spacing: 8) {
+            Text("Services")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(Theme.muted)
+            Spacer()
+            if project.services.count >= 5 {
+                HStack(spacing: 4) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 10))
+                        .foregroundStyle(Theme.muted)
+                    TextField("Filter", text: $query)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 11))
+                        .frame(width: 96)
+                }
+                .padding(.horizontal, 6)
+                .padding(.vertical, 3)
+                .background(Capsule().fill(Theme.raised))
+            }
+            if let runningLabel {
+                Text(runningLabel)
+                    .font(.system(size: 11))
+                    .foregroundStyle(Theme.muted)
+            }
+        }
+        .padding(.bottom, 6)
+    }
+
+    private var visible: [Service] {
+        let needle = query.trimmingCharacters(in: .whitespaces).lowercased()
+        guard !needle.isEmpty else { return project.services }
+        return project.services.filter {
+            $0.name.lowercased().contains(needle) || $0.command.lowercased().contains(needle)
         }
     }
 
     private var runningLabel: String? {
-        guard !project.services.isEmpty else { return nil }
-        return runningServices > 0 ? "\(runningServices) of \(project.services.count) running" : nil
-    }
-
-    @ViewBuilder
-    private func group<Content: View>(title: String, trailing: String? = nil,
-                                      @ViewBuilder _ content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack(spacing: 6) {
-                Text(title)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(Theme.muted)
-                Spacer()
-                if let trailing {
-                    Text(trailing)
-                        .font(.system(size: 11))
-                        .foregroundStyle(Theme.muted)
-                }
-            }
-            .padding(.horizontal, 4)
-            VStack(spacing: 0) { content() }
-                .background(Theme.raised)
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-        }
-    }
-
-    private var rowDivider: some View {
-        Rectangle().fill(Theme.line).frame(height: 0.5).padding(.leading, 38)
+        guard !project.services.isEmpty, runningServices > 0 else { return nil }
+        return "\(runningServices) of \(project.services.count) running"
     }
 
     private var emptyState: some View {
-        group(title: "Services") {
-            VStack(spacing: 10) {
-                Text("No services for this project")
-                    .font(.system(size: 13))
-                    .foregroundStyle(.secondary)
-                HStack(spacing: 8) {
-                    Button("Add service") { sheet = .newService(project) }
-                    Button("Magic") { sheet = .magic(project) }
-                    if !detected.isEmpty {
-                        Button("Add \(detected.count) detected") {
-                            var copy = project
-                            copy.services.append(contentsOf: detected)
-                            store.update(copy)
-                        }
+        VStack(spacing: 10) {
+            Text("No services for this project")
+                .font(.system(size: 13))
+                .foregroundStyle(.secondary)
+            HStack(spacing: 8) {
+                Button("Add service") { sheet = .newService(project) }
+                Button("Magic") { sheet = .magic(project) }
+                if !detected.isEmpty {
+                    Button("Add \(detected.count) detected") {
+                        var copy = project
+                        copy.services.append(contentsOf: detected)
+                        store.update(copy)
                     }
                 }
-                .controlSize(.small)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 22)
+            .controlSize(.small)
         }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 26)
     }
 
     private var runningServices: Int {
@@ -116,7 +133,7 @@ private struct PathControl: NSViewRepresentable {
         control.pathStyle = .standard
         control.isEditable = false
         control.focusRingType = .none
-        control.font = .systemFont(ofSize: 11)
+        control.font = .systemFont(ofSize: 10)
         control.target = context.coordinator
         control.action = #selector(Coordinator.clicked(_:))
         control.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
@@ -141,6 +158,7 @@ private struct ServiceRow: View {
     let project: Project
     let service: Service
     let expanded: Bool
+    let hovered: Bool
     let toggleLog: () -> Void
     let edit: () -> Void
 
@@ -157,7 +175,7 @@ private struct ServiceRow: View {
                     Image(systemName: status.isLive ? "stop.fill" : "play.fill")
                         .font(.system(size: 10))
                         .foregroundStyle(status.isLive ? Theme.ink : Theme.muted)
-                        .frame(width: 18, height: 20)
+                        .frame(width: 16, height: 20)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.borderless)
@@ -168,7 +186,7 @@ private struct ServiceRow: View {
 
                 Text(service.command)
                     .font(.system(size: 12))
-                    .foregroundStyle(Theme.muted.opacity(0.7))
+                    .foregroundStyle(Theme.faint)
                     .lineLimit(1)
                     .truncationMode(.middle)
 
@@ -197,19 +215,23 @@ private struct ServiceRow: View {
                 Button(action: toggleLog) {
                     Image(systemName: "arrow.down")
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(Theme.muted.opacity(0.8))
+                        .foregroundStyle(Theme.faint)
                         .rotationEffect(.degrees(expanded ? 180 : 0))
-                        .frame(width: 18, height: 22)
+                        .frame(width: 16, height: 20)
                         .contentShape(Rectangle())
                 }
-                .help(expanded ? "Hide output" : "Show output")
                 .buttonStyle(.borderless)
+                .help(expanded ? "Hide output" : "Show output")
+                .opacity(hovered || expanded ? 1 : 0)
             }
-            .padding(.horizontal, 10)
-            .frame(height: 30)
+            .padding(.horizontal, 8)
+            .frame(height: 32)
+            .background(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(hovered ? Theme.hover : .clear)
+            )
 
             if let conflict = runner.conflict(of: service) {
-                Rectangle().fill(Theme.line).frame(height: 0.5).padding(.leading, 38)
                 HStack(spacing: 8) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundStyle(ServiceStatus.failed(nil).color)
@@ -219,13 +241,15 @@ private struct ServiceRow: View {
                     Button("Free port") { runner.freeConflict(service) }
                         .controlSize(.small)
                 }
-                .padding(.horizontal, 12)
-                .frame(height: 36)
+                .padding(.horizontal, 10)
+                .frame(height: 32)
             }
 
             if expanded {
-                Rectangle().fill(Theme.line).frame(height: 0.5).padding(.leading, 38)
                 LogView(project: project, service: service)
+                    .background(Theme.raised)
+                    .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+                    .padding(.bottom, 6)
             }
         }
         .contextMenu {
