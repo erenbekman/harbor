@@ -1,14 +1,18 @@
 import AppKit
+import Combine
 import ServiceManagement
 import SwiftUI
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSToolbarDelegate {
     private let store = Store()
     private let runner = Runner()
     private var window: NSWindow?
     private var statusItem: NSStatusItem?
     private var palette: PaletteWindow?
+    private var splitController: NSSplitViewController?
+    private var statusWatch: AnyCancellable?
+    private var statusShowsRunning = false
     private var settings: NSWindow?
     private lazy var strip = Strip(store: store, runner: runner)
 
@@ -45,23 +49,130 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             NSApp.activate(ignoringOtherApps: true)
             return
         }
-        let root = RootView()
-            .environmentObject(store)
-            .environmentObject(runner)
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 760, height: 520),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
-            backing: .buffered, defer: false)
+
+        let sidebar = NSSplitViewItem(sidebarWithViewController: NSHostingController(
+            rootView: ProjectSidebar().environmentObject(store).environmentObject(runner)))
+        sidebar.minimumThickness = 180
+        sidebar.maximumThickness = 300
+        sidebar.canCollapse = true
+
+        let detail = NSSplitViewItem(viewController: NSHostingController(
+            rootView: DetailContainer().environmentObject(store).environmentObject(runner)))
+
+        let split = NSSplitViewController()
+        split.addSplitViewItem(sidebar)
+        split.addSplitViewItem(detail)
+        splitController = split
+
+        let window = NSWindow(contentViewController: split)
+        window.appearance = NSAppearance(named: .darkAqua)
+        window.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
         window.title = "Harbor"
-        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
+        window.toolbarStyle = .unified
         window.isReleasedWhenClosed = false
-        window.contentView = NSHostingView(rootView: root)
+        window.setContentSize(NSSize(width: 820, height: 560))
+
+        let toolbar = NSToolbar(identifier: "harbor.main")
+        toolbar.delegate = self
+        toolbar.displayMode = .iconOnly
+        window.toolbar = toolbar
+
         window.center()
         window.setFrameAutosaveName("HarborMain")
         self.window = window
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
+
+    // MARK: - Toolbar
+
+    private enum Item {
+        static let transport = NSToolbarItem.Identifier("transport")
+        static let startAll = NSToolbarItem.Identifier("startAll")
+        static let stopAll = NSToolbarItem.Identifier("stopAll")
+        static let magic = NSToolbarItem.Identifier("magic")
+        static let addService = NSToolbarItem.Identifier("addService")
+    }
+
+    func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
+        [.toggleSidebar, .sidebarTrackingSeparator,
+         Item.transport, .flexibleSpace, Item.magic, Item.addService]
+    }
+
+    func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
+        toolbarDefaultItemIdentifiers(toolbar) + [.space]
+    }
+
+    func toolbar(_ toolbar: NSToolbar, itemForItemIdentifier identifier: NSToolbarItem.Identifier,
+                 willBeInsertedIntoToolbar flag: Bool) -> NSToolbarItem? {
+        if identifier == .sidebarTrackingSeparator, let split = splitController {
+            return NSTrackingSeparatorToolbarItem(identifier: identifier,
+                                                  splitView: split.splitView, dividerIndex: 0)
+        }
+        if identifier == Item.transport {
+            let play = NSImage(systemSymbolName: "play.fill", accessibilityDescription: nil)!
+            let stop = NSImage(systemSymbolName: "stop.fill", accessibilityDescription: nil)!
+            let group = NSToolbarItemGroup(itemIdentifier: identifier,
+                                           images: [play, stop],
+                                           selectionMode: .momentary,
+                                           labels: ["Start all", "Stop all"],
+                                           target: self,
+                                           action: #selector(transport(_:)))
+            group.label = "Services"
+            group.controlRepresentation = .expanded
+            group.subitems[0].toolTip = "Start every service in this project"
+            group.subitems[1].toolTip = "Stop every service in this project"
+            return group
+        }
+
+        let item = NSToolbarItem(itemIdentifier: identifier)
+        item.target = self
+        item.isBordered = true
+        switch identifier {
+        case Item.magic:
+            item.label = "Magic"
+            item.toolTip = "Let Claude read the project and propose its services"
+            item.image = NSImage(systemSymbolName: "sparkles", accessibilityDescription: nil)
+            item.action = #selector(runMagic)
+        case Item.addService:
+            item.label = "Add service"
+            item.toolTip = "Add a service"
+            item.image = NSImage(systemSymbolName: "plus", accessibilityDescription: nil)
+            item.action = #selector(addService)
+        default:
+            return nil
+        }
+        return item
+    }
+
+    @objc func validateToolbarItem(_ item: NSToolbarItem) -> Bool {
+        guard let project = store.selected else { return false }
+        switch item.itemIdentifier {
+        case Item.transport:
+            return !project.services.isEmpty
+        default:
+            return true
+        }
+    }
+
+    @objc private func transport(_ sender: NSToolbarItemGroup) {
+        if sender.selectedIndex == 1 { stopAll() } else { startAll() }
+    }
+
+    @objc private func startAll() {
+        guard let project = store.selected else { return }
+        runner.startAll(in: project)
+    }
+
+    @objc private func stopAll() {
+        guard let project = store.selected else { return }
+        runner.stopAll(in: project)
+    }
+
+    @objc private func runMagic() { store.requested = .magic }
+
+    @objc private func addService() { store.requested = .newService }
 
     // MARK: - Quick switcher
 
@@ -112,11 +223,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             NSApp.activate(ignoringOtherApps: true)
             return
         }
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 640, height: 420),
-                              styleMask: [.titled, .closable], backing: .buffered, defer: false)
-        window.title = "Settings"
+
+        let tabs = NSTabViewController()
+        tabs.tabStyle = .toolbar
+
+        let general = NSTabViewItem(viewController: NSHostingController(
+            rootView: GeneralSettings(strip: strip)))
+        general.label = "General"
+        general.image = NSImage(systemSymbolName: "gearshape", accessibilityDescription: nil)
+        tabs.addTabViewItem(general)
+
+        let about = NSTabViewItem(viewController: NSHostingController(rootView: AboutSettings()))
+        about.label = "About"
+        about.image = NSImage(systemSymbolName: "info.circle", accessibilityDescription: nil)
+        tabs.addTabViewItem(about)
+
+        let window = NSWindow(contentViewController: tabs)
+        window.appearance = NSAppearance(named: .darkAqua)
+        window.styleMask = [.titled, .closable]
+        window.title = "Harbor Settings"
         window.isReleasedWhenClosed = false
-        window.contentView = NSHostingView(rootView: SettingsView(strip: strip))
         window.center()
         settings = window
         window.makeKeyAndOrderFront(nil)
@@ -144,12 +270,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func buildStatusItem() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        item.button?.image = NSImage(systemSymbolName: "sailboat.fill", accessibilityDescription: "Harbor")
-        item.button?.image?.isTemplate = true
+        item.button?.image = Self.statusImage(running: false)
         let menu = NSMenu()
         menu.delegate = self
         item.menu = menu
         statusItem = item
+
+        statusWatch = runner.objectWillChange.sink { [weak self] _ in
+            Task { @MainActor in self?.refreshStatusImage() }
+        }
+    }
+
+    private static func statusImage(running: Bool) -> NSImage? {
+        let name = running ? "arrow.left.arrow.right.circle.fill" : "arrow.left.arrow.right"
+        let image = NSImage(systemSymbolName: name, accessibilityDescription: "Harbor")
+        image?.isTemplate = true
+        return image
+    }
+
+    private func refreshStatusImage() {
+        let running = runner.runningCount > 0
+        guard running != statusShowsRunning else { return }
+        statusShowsRunning = running
+        statusItem?.button?.image = Self.statusImage(running: running)
     }
 
     func menuNeedsUpdate(_ menu: NSMenu) {

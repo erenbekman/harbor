@@ -16,7 +16,6 @@ final class Strip: ObservableObject {
     /// miss and impossible to aim at.
     static let closedWidth: CGFloat = 52
     static let chipSize: CGFloat = 30
-    static let chipSlot: CGFloat = 35
     static let chipSpacing: CGFloat = 7
     static let rowHeight: CGFloat = 30
     static let serviceHeight: CGFloat = 30
@@ -174,7 +173,7 @@ final class Strip: ObservableObject {
 
     private var closedHeight: CGFloat {
         let count = CGFloat(max(store.projects.count, 1))
-        return Self.padding * 2 + count * Self.chipSlot + (count - 1) * Self.chipSpacing
+        return Self.padding * 2 + count * Self.chipSize + (count - 1) * Self.chipSpacing
     }
 
     private func frame(open: Bool) -> NSRect {

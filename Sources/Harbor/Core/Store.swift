@@ -4,6 +4,7 @@ import Foundation
 final class Store: ObservableObject {
     @Published var projects: [Project] = []
     @Published var selection: Project.ID?
+    @Published var requested: PanelAction?
 
     init() {
         load()
@@ -42,6 +43,11 @@ final class Store: ObservableObject {
     func remove(_ project: Project) {
         projects.removeAll { $0.id == project.id }
         if selection == project.id { selection = projects.first?.id }
+        save()
+    }
+
+    func move(from offsets: IndexSet, to destination: Int) {
+        projects.move(fromOffsets: offsets, toOffset: destination)
         save()
     }
 

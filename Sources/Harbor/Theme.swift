@@ -1,6 +1,25 @@
 import SwiftUI
 
+extension Color {
+    init(hex: UInt32) {
+        self.init(.sRGB,
+                  red: Double((hex >> 16) & 0xFF) / 255,
+                  green: Double((hex >> 8) & 0xFF) / 255,
+                  blue: Double(hex & 0xFF) / 255)
+    }
+}
+
 enum Theme {
+    static let base = Color(hex: 0x272A2C)
+    static let raised = Color(hex: 0x313335)
+    static let sidebar = Color(hex: 0x2B3135)
+    static let line = Color(hex: 0x3C3F41)
+    static let control = Color(hex: 0x484D4E)
+    static let button = Color(hex: 0x505050)
+    static let ink = Color(hex: 0xF2F2F5)
+    static let muted = Color(hex: 0x9A9DA0)
+    static let accent = Color(hex: 0x0091FF)
+
     static let railWidth: CGFloat = 78
     static let railExpandedWidth: CGFloat = 196
     static let chipSize: CGFloat = 54
@@ -13,14 +32,14 @@ enum Theme {
     static let secondary = Color(nsColor: .secondaryLabelColor)
 
     static let tints: [Color] = [
-        Color(red: 0.85, green: 0.44, blue: 0.24),
-        Color(red: 0.29, green: 0.56, blue: 0.89),
-        Color(red: 0.27, green: 0.68, blue: 0.47),
-        Color(red: 0.76, green: 0.33, blue: 0.55),
-        Color(red: 0.52, green: 0.44, blue: 0.85),
-        Color(red: 0.86, green: 0.66, blue: 0.22),
-        Color(red: 0.36, green: 0.65, blue: 0.70),
-        Color(red: 0.50, green: 0.52, blue: 0.58),
+        Color(nsColor: .systemOrange),
+        Color(nsColor: .systemBlue),
+        Color(nsColor: .systemGreen),
+        Color(nsColor: .systemPink),
+        Color(nsColor: .systemPurple),
+        Color(nsColor: .systemYellow),
+        Color(nsColor: .systemTeal),
+        Color(nsColor: .systemGray),
     ]
 
     static func tint(_ index: Int) -> Color {
@@ -31,9 +50,9 @@ enum Theme {
 extension ServiceStatus {
     var color: Color {
         switch self {
-        case .running: return Color(red: 0.24, green: 0.72, blue: 0.40)
-        case .starting: return Color(red: 0.92, green: 0.70, blue: 0.20)
-        case .failed: return Color(red: 0.87, green: 0.33, blue: 0.29)
+        case .running: return Color(nsColor: .systemGreen)
+        case .starting: return Color(nsColor: .systemOrange)
+        case .failed: return Color(nsColor: .systemRed)
         case .stopped: return Theme.secondary.opacity(0.55)
         }
     }

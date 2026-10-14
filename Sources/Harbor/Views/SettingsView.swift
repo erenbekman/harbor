@@ -2,100 +2,55 @@ import SwiftUI
 import ServiceManagement
 import AppKit
 
-struct SettingsView: View {
-    enum Section: String, CaseIterable, Identifiable {
-        case general, about
-        var id: String { rawValue }
-        var title: String { rawValue.capitalized }
-        var icon: String { self == .general ? "gearshape" : "info.circle" }
-    }
-
-    @ObservedObject var strip: Strip
-    @State private var section: Section = .general
-
-    var body: some View {
-        HStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 2) {
-                ForEach(Section.allCases) { item in
-                    HStack(spacing: 8) {
-                        Image(systemName: item.icon)
-                            .font(.system(size: 12))
-                            .frame(width: 16)
-                        Text(item.title)
-                            .font(.system(size: 13))
-                        Spacer(minLength: 0)
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 7)
-                    .background(
-                        RoundedRectangle(cornerRadius: 7, style: .continuous)
-                            .fill(section == item ? Color.primary.opacity(0.09) : .clear)
-                    )
-                    .contentShape(Rectangle())
-                    .onTapGesture { section = item }
-                }
-                Spacer()
-            }
-            .padding(8)
-            .frame(width: 168)
-            .background(Theme.rail)
-
-            Divider()
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    switch section {
-                    case .general: GeneralPane(strip: strip)
-                    case .about: AboutPane()
-                    }
-                }
-                .padding(20)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .background(Theme.surface)
-        }
-        .frame(width: 640, height: 420)
-    }
-}
-
-private struct GeneralPane: View {
+struct GeneralSettings: View {
     @ObservedObject var strip: Strip
     @State private var openAtLogin = SMAppService.mainApp.status == .enabled
     @State private var error: String?
 
     var body: some View {
-        Text("General")
-            .font(.system(size: 17, weight: .semibold))
-
-        card {
-            Toggle("Edge strip", isOn: Binding(
-                get: { strip.installed },
-                set: { strip.setEnabled($0) }
-            ))
-            Text("A column of project chips on the right edge of the screen, above every app. Hover it to see each project's services and start or stop them; drag it to move it up or down.")
-                .font(.system(size: 11))
-                .foregroundStyle(Theme.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-
-        card {
-            Toggle("Open Harbor at login", isOn: $openAtLogin)
-                .onChange(of: openAtLogin) { _, wanted in apply(wanted) }
-            if let error {
-                Text(error)
+        Form {
+            Section {
+                Toggle("Open Harbor at login", isOn: $openAtLogin)
+                    .onChange(of: openAtLogin) { _, wanted in apply(wanted) }
+                Toggle("Show the edge strip", isOn: Binding(
+                    get: { strip.installed },
+                    set: { strip.setEnabled($0) }
+                ))
+            } footer: {
+                Text("The strip is a column of project chips on the right edge of the screen, above every app. Hover it to start or stop a service without leaving what you are doing.")
                     .font(.system(size: 11))
-                    .foregroundStyle(ServiceStatus.failed(nil).color)
+                    .foregroundStyle(.secondary)
             }
-            Text("Services run in tmux, so quitting Harbor does not stop them. They are adopted again the next time it opens.")
-                .font(.system(size: 11))
-                .foregroundStyle(Theme.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
 
-        card {
-            row("Quick switcher", "⌃⌘H  ·  ⌘K in the app")
-            row("Services", "one tmux session each, on \(Tmux.socketPath)")
+            if let error {
+                Section {
+                    Text(error)
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color(nsColor: .systemRed))
+                }
+            }
+
+            Section {
+                LabeledContent("Quick switcher", value: "⌃⌘H")
+                LabeledContent("Quick switcher in Harbor", value: "⌘K")
+            } header: {
+                Text("Shortcuts")
+            }
+
+            Section {
+                LabeledContent("Run in", value: "tmux")
+                LabeledContent("Socket", value: Tmux.socketPath)
+            } header: {
+                Text("Services")
+            } footer: {
+                Text("Services keep running when Harbor quits, and are adopted again the next time it opens.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
         }
+        .formStyle(.grouped)
+        .frame(width: 480)
+        .frame(minHeight: 430)
     }
 
     private func apply(_ wanted: Bool) {
@@ -108,107 +63,66 @@ private struct GeneralPane: View {
             openAtLogin = SMAppService.mainApp.status == .enabled
         }
     }
-
-    private func row(_ label: String, _ value: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
-            Text(label)
-                .font(.system(size: 12))
-                .foregroundStyle(Theme.secondary)
-                .frame(width: 110, alignment: .leading)
-            Text(value)
-                .font(.system(size: 12, design: .monospaced))
-                .textSelection(.enabled)
-            Spacer(minLength: 0)
-        }
-    }
-
-    @ViewBuilder
-    private func card<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 10) { content() }
-            .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.card))
-            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(Theme.separator.opacity(0.6), lineWidth: 1))
-    }
 }
 
-private struct AboutPane: View {
+struct AboutSettings: View {
     @ObservedObject private var updater = Updater.shared
 
     var body: some View {
-        Text("About")
-            .font(.system(size: 17, weight: .semibold))
-
-        VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Harbor")
-                    .font(.system(size: 15, weight: .semibold))
-                Text("A rail of projects, and every project's dev servers one click away.")
-                    .font(.system(size: 12))
-                    .foregroundStyle(Theme.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(14)
-
-            Divider()
-
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Version \(updater.currentVersion)")
-                        .font(.system(size: 13, weight: .medium))
-                    status
+        Form {
+            Section {
+                HStack(spacing: 12) {
+                    Image(nsImage: NSApp.applicationIconImage)
+                        .resizable()
+                        .frame(width: 52, height: 52)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Harbor")
+                            .font(.system(size: 15, weight: .semibold))
+                        Text("Your projects' dev servers, one click away.")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                    }
                 }
-                Spacer()
-                action
+                .padding(.vertical, 4)
             }
-            .padding(14)
 
-            Divider()
+            Section {
+                LabeledContent("Version") {
+                    HStack(spacing: 10) {
+                        status
+                        action
+                    }
+                }
+            }
 
-            VStack(alignment: .leading, spacing: 7) {
-                row("Repository", "github.com/\(Updater.repository)")
-                row("tmux", Tmux.path ?? "not installed")
-                row("Support", Paths.support.path.replacingOccurrences(
+            Section {
+                LabeledContent("Repository", value: "github.com/\(Updater.repository)")
+                LabeledContent("tmux", value: Tmux.path ?? "not installed")
+                LabeledContent("Support", value: Paths.support.path.replacingOccurrences(
                     of: FileManager.default.homeDirectoryForCurrentUser.path, with: "~"))
             }
-            .padding(14)
         }
-        .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.card))
-        .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
-            .stroke(Theme.separator.opacity(0.6), lineWidth: 1))
+        .formStyle(.grouped)
+        .frame(width: 480)
+        .frame(minHeight: 430)
     }
 
     @ViewBuilder
     private var status: some View {
         switch updater.state {
-        case .idle:
-            Text("Checked against the latest GitHub release.")
-                .font(.system(size: 11)).foregroundStyle(Theme.secondary)
-        case .checking:
-            Text("Checking…").font(.system(size: 11)).foregroundStyle(Theme.secondary)
+        case .idle, .checking:
+            Text(updater.currentVersion).foregroundStyle(.secondary)
         case .upToDate:
-            Text("You are on the latest version.")
-                .font(.system(size: 11)).foregroundStyle(Theme.secondary)
-        case .available(let version, _, let notes):
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Version \(version) is available.")
-                    .font(.system(size: 11)).foregroundStyle(ServiceStatus.running.color)
-                if let line = notes.split(separator: "\n").first, !line.isEmpty {
-                    Text(String(line))
-                        .font(.system(size: 11)).foregroundStyle(Theme.secondary)
-                        .lineLimit(2)
-                }
-            }
+            Text("\(updater.currentVersion) — up to date").foregroundStyle(.secondary)
+        case .available(let version, _, _):
+            Text("\(updater.currentVersion) — \(version) available")
+                .foregroundStyle(ServiceStatus.running.color)
         case .downloading:
-            Text("Downloading…").font(.system(size: 11)).foregroundStyle(Theme.secondary)
+            Text("Downloading…").foregroundStyle(.secondary)
         case .installing:
-            Text("Installing — Harbor will restart.")
-                .font(.system(size: 11)).foregroundStyle(Theme.secondary)
+            Text("Installing — Harbor will restart.").foregroundStyle(.secondary)
         case .failed(let message):
-            Text(message)
-                .font(.system(size: 11)).foregroundStyle(ServiceStatus.failed(nil).color)
-                .fixedSize(horizontal: false, vertical: true)
+            Text(message).foregroundStyle(Color(nsColor: .systemRed))
         }
     }
 
@@ -218,23 +132,11 @@ private struct AboutPane: View {
         case .checking, .downloading, .installing:
             ProgressView().controlSize(.small)
         case .available(let version, _, _):
-            Button("Update to \(version)") { updater.install() }
-                .buttonStyle(.borderedProminent)
+            Button { updater.install() } label: {
+                Label("Update to \(version)", systemImage: "arrow.down.circle")
+            }
         default:
             Button("Check") { updater.check() }
-        }
-    }
-
-    private func row(_ label: String, _ value: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
-            Text(label)
-                .font(.system(size: 12))
-                .foregroundStyle(Theme.secondary)
-                .frame(width: 80, alignment: .leading)
-            Text(value)
-                .font(.system(size: 12, design: .monospaced))
-                .textSelection(.enabled)
-            Spacer(minLength: 0)
         }
     }
 }

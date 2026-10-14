@@ -15,12 +15,8 @@ func color(_ hex: UInt32, _ alpha: CGFloat = 1) -> NSColor {
             blue: CGFloat(hex & 0xFF) / 255, alpha: alpha)
 }
 
-let plateTop = color(0x232B36)
-let plateBottom = color(0x0F141A)
-let panelFill = color(0x161C24)
-let chipIdle = color(0x2B3540)
-let accent = color(0xFF9E20)
-let accentDim = color(0xC9741A)
+let plateTop = color(0x3C424B)
+let plateBottom = color(0x1B1F24)
 
 func draw(_ px: Int) -> NSImage {
     let size = CGFloat(px)
@@ -28,72 +24,27 @@ func draw(_ px: Int) -> NSImage {
     image.lockFocus()
     let s = size / 1024
 
-    func rounded(_ x: CGFloat, _ y: CGFloat, _ w: CGFloat, _ h: CGFloat, _ r: CGFloat) -> NSBezierPath {
-        NSBezierPath(roundedRect: NSRect(x: x * s, y: y * s, width: w * s, height: h * s),
-                     xRadius: r * s, yRadius: r * s)
-    }
-
-    let plate = rounded(100, 100, 824, 824, 185)
+    let plate = NSBezierPath(roundedRect: NSRect(x: 100 * s, y: 100 * s, width: 824 * s, height: 824 * s),
+                             xRadius: 185 * s, yRadius: 185 * s)
     NSGradient(starting: plateTop, ending: plateBottom)?.draw(in: plate, angle: -90)
 
-    let panel = rounded(352, 212, 320, 600, 104)
-    panelFill.setFill()
-    panel.fill()
-    color(0xFFFFFF, 0.10).setStroke()
-    panel.lineWidth = 3 * s
-    panel.stroke()
-
-    chipIdle.setFill()
-    rounded(437, 246, 150, 150, 46).fill()
-    rounded(437, 422, 150, 150, 46).fill()
-
-    let berth = rounded(437, 628, 150, 150, 46)
-    NSGradient(starting: accent, ending: accentDim)?.draw(in: berth, angle: -90)
-
-    accent.setFill()
-    rounded(472, 598, 80, 18, 9).fill()
-
-    let white = color(0xFFFFFF, 0.96)
-    white.setFill()
-
-    if px <= 64 {
-        let sail = NSBezierPath()
-        sail.move(to: NSPoint(x: 512 * s, y: 762 * s))
-        sail.line(to: NSPoint(x: 512 * s, y: 652 * s))
-        sail.line(to: NSPoint(x: 578 * s, y: 652 * s))
-        sail.close()
-        sail.fill()
-        let mast = NSBezierPath()
-        mast.move(to: NSPoint(x: 500 * s, y: 744 * s))
-        mast.line(to: NSPoint(x: 500 * s, y: 652 * s))
-        mast.line(to: NSPoint(x: 450 * s, y: 652 * s))
-        mast.close()
-        mast.fill()
-        image.unlockFocus()
-        return image
+    func arrow(y: CGFloat, from: CGFloat, to: CGFloat) -> NSBezierPath {
+        let path = NSBezierPath()
+        path.move(to: NSPoint(x: from * s, y: y * s))
+        path.line(to: NSPoint(x: to * s, y: y * s))
+        let sign: CGFloat = to > from ? -1 : 1
+        path.move(to: NSPoint(x: (to + sign * 82) * s, y: (y + 82) * s))
+        path.line(to: NSPoint(x: to * s, y: y * s))
+        path.line(to: NSPoint(x: (to + sign * 82) * s, y: (y - 82) * s))
+        path.lineWidth = 52 * s
+        path.lineCapStyle = .round
+        path.lineJoinStyle = .round
+        return path
     }
 
-    let mainSail = NSBezierPath()
-    mainSail.move(to: NSPoint(x: 515 * s, y: 752 * s))
-    mainSail.line(to: NSPoint(x: 515 * s, y: 680 * s))
-    mainSail.line(to: NSPoint(x: 565 * s, y: 680 * s))
-    mainSail.close()
-    mainSail.fill()
-
-    let jib = NSBezierPath()
-    jib.move(to: NSPoint(x: 503 * s, y: 742 * s))
-    jib.line(to: NSPoint(x: 503 * s, y: 680 * s))
-    jib.line(to: NSPoint(x: 461 * s, y: 680 * s))
-    jib.close()
-    jib.fill()
-
-    let hull = NSBezierPath()
-    hull.move(to: NSPoint(x: 455 * s, y: 668 * s))
-    hull.line(to: NSPoint(x: 569 * s, y: 668 * s))
-    hull.line(to: NSPoint(x: 549 * s, y: 646 * s))
-    hull.line(to: NSPoint(x: 475 * s, y: 646 * s))
-    hull.close()
-    hull.fill()
+    color(0xFFFFFF, 0.95).setStroke()
+    arrow(y: 596, from: 300, to: 690).stroke()
+    arrow(y: 428, from: 724, to: 334).stroke()
 
     image.unlockFocus()
     return image

@@ -108,6 +108,13 @@ enum ServiceStatus: Equatable {
     var isLive: Bool { self == .running || self == .starting }
 }
 
+enum PanelAction: Equatable {
+    case newProject
+    case editProject(Project)
+    case newService
+    case magic
+}
+
 struct PortConflict: Equatable {
     let port: Int
     let pid: Int32

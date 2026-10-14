@@ -7,7 +7,7 @@
 <meta name="description" content="A native macOS app that starts and stops each project's dev servers. Services run in tmux, so they outlive the app.">
 <meta property="og:title" content="harbor">
 <meta property="og:description" content="Your projects' dev servers, one click away. Services run in tmux, so they outlive the app.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231d2128'/%3E%3Crect x='20' y='6' width='24' height='52' rx='10' fill='%23161c24' stroke='%23ffffff' stroke-opacity='0.12'/%3E%3Crect x='26' y='10' width='12' height='12' rx='4' fill='%23ff9e20'/%3E%3Cpath d='M32 11.5 L32 19 L36.5 19 Z' fill='%23ffffff'/%3E%3Cpath d='M30.5 18 L27.5 18 L30.5 13.5 Z' fill='%23ffffff'/%3E%3Crect x='28.5' y='23.5' width='7' height='2' rx='1' fill='%23ff9e20'/%3E%3Crect x='26' y='28' width='12' height='12' rx='4' fill='%232b3540'/%3E%3Crect x='26' y='43' width='12' height='12' rx='4' fill='%232b3540'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2325292f'/%3E%3Cg stroke='%23f4f2f2' stroke-width='4' stroke-linecap='round' stroke-linejoin='round' fill='none'%3E%3Cpath d='M16 26 H44'/%3E%3Cpath d='M38 20 L44 26 L38 32'/%3E%3Cpath d='M48 40 H20'/%3E%3Cpath d='M26 34 L20 40 L26 46'/%3E%3C/g%3E%3C/svg%3E">
 <style>
 :root{
   --bg:#1d2128; --ink:#f4f2f2; --dim:#999b9e; --faint:#4c565f; --line:#2c363d;
@@ -171,16 +171,16 @@ footer{padding:26px 0 60px;color:var(--dim);font-size:13px;display:flex;
 <p class="cap">The window is where you set things up: add a folder, edit a service, read its output.</p>
 <pre class="wide" style="margin-top:26px">
  ┌──────┐          ┌──────────────────────┐
- │  <span class="acc"><b>N</b></span>   │          │         ───          │
- │ <span class="acc">▔▔▔</span>  │          │ <b>●</b> nott             <span class="g">2</span> │
- │      │   hover  │   ▣ backend    <span class="g">:4000</span> │
- │  U   │ <span class="acc">───────▶</span> │   ▣ client     :3000 │
- │      │          │   ▷ horizon          │
- │  M   │          │ ● ustad              │
- │      │          │   ▷ serve            │
+ │  <b>N</b>   │          │         ───          │
+ │      │          │ <b>nott</b>       <span class="g">2 running</span> │
+ │  U   │   hover  │   ■ backend    <span class="g">:4000</span> │
+ │      │ <span class="acc">───────▶</span> │   ■ client     <span class="g">:3000</span> │
+ │  M   │          │   ▶ horizon  stopped │
+ │      │          │ ustad                │
+ │      │          │   ▶ serve   <span class="y">starting</span> │
  └──────┘          └──────────────────────┘
 </pre>
-<p class="cap">The strip is where the rest of the day happens. Closed, it is a column of project chips — a <span class="acc">wake</span> under one means something in it is running. Hover and it opens: the chip flies into its row and every service comes with it. Pressing play never takes focus from your editor.</p>
+<p class="cap">The strip is where the rest of the day happens. Closed, it is a column of project chips, the ones with something running marked in the system accent. Hover and it opens: the chip flies into its row and every service comes with it, each with its port. Pressing play never takes focus from your editor.</p>
 </div>
 
 <section id="what">

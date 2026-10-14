@@ -9,7 +9,7 @@ struct StripView: View {
     @State private var lastDrag: CGFloat = 0
     @Namespace private var berth
 
-    private var radius: CGFloat { strip.open ? 17 : 14 }
+    private var radius: CGFloat { strip.open ? 12 : 11 }
 
     var body: some View {
         Group {
@@ -25,26 +25,17 @@ struct StripView: View {
 
     private var panel: some View {
         let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
-        return VisualEffect(material: .hudWindow, blending: .behindWindow)
-            .clipShape(shape)
-            .overlay(
-                shape.strokeBorder(
-                    LinearGradient(colors: [Color.white.opacity(0.26), Color.white.opacity(0.07)],
-                                   startPoint: .top, endPoint: .bottom),
-                    lineWidth: 0.5)
-            )
-            .shadow(color: .black.opacity(0.4), radius: 18, x: -3, y: 8)
+        return shape
+            .fill(Theme.base.opacity(0.96))
+            .overlay(shape.strokeBorder(Theme.line, lineWidth: 0.5))
+            .shadow(color: .black.opacity(0.28), radius: 14, x: -2, y: 6)
     }
 
     private var closed: some View {
         VStack(spacing: Strip.chipSpacing) {
             ForEach(store.projects) { project in
-                VStack(spacing: 3) {
-                    chip(project)
-                        .matchedGeometryEffect(id: project.id, in: berth)
-                    wake(project)
-                }
-                .frame(height: Strip.chipSlot)
+                chip(project)
+                    .matchedGeometryEffect(id: project.id, in: berth)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -53,25 +44,23 @@ struct StripView: View {
     }
 
     private func chip(_ project: Project) -> some View {
-        let tint = Theme.tint(project.tint)
         let live = running(project) > 0
-        let shape = RoundedRectangle(cornerRadius: 9, style: .continuous)
-        return shape
-            .fill(live ? AnyShapeStyle(tint.gradient) : AnyShapeStyle(Color.white.opacity(0.07)))
-            .overlay(shape.strokeBorder(Color.white.opacity(live ? 0.18 : 0.1), lineWidth: 0.5))
+        return RoundedRectangle(cornerRadius: 8, style: .continuous)
+            .fill(live ? Theme.control : Theme.raised)
             .frame(width: Strip.chipSize, height: Strip.chipSize)
             .overlay(
                 Text(project.badge)
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
-                    .foregroundStyle(live ? Color.white : tint)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(live ? Theme.ink : Theme.muted)
             )
-            .shadow(color: live ? tint.opacity(0.35) : .clear, radius: 6, y: 2)
-    }
-
-    private func wake(_ project: Project) -> some View {
-        Wake(tint: Theme.tint(project.tint),
-             visible: running(project) > 0,
-             animated: !reduceMotion)
+            .overlay(alignment: .topTrailing) {
+                if live {
+                    Circle()
+                        .fill(Theme.accent)
+                        .frame(width: 7, height: 7)
+                        .offset(x: 2, y: -2)
+                }
+            }
     }
 
     private var expandedBody: some View {
@@ -81,10 +70,7 @@ struct StripView: View {
                 VStack(spacing: 0) {
                     ForEach(Array(store.projects.enumerated()), id: \.element.id) { index, project in
                         if index > 0 {
-                            Rectangle()
-                                .fill(Color.white.opacity(0.07))
-                                .frame(height: 0.5)
-                                .padding(.horizontal, 12)
+                            Rectangle().fill(Theme.line).frame(height: 0.5).padding(.leading, 12)
                         }
                         VStack(spacing: 0) {
                             projectRow(project)
@@ -104,12 +90,12 @@ struct StripView: View {
 
     private var empty: some View {
         VStack(spacing: 6) {
-            Image(systemName: "sailboat")
-                .font(.system(size: 17, weight: .light))
-                .foregroundStyle(.tertiary)
-            Text("nothing docked yet")
+            Image(systemName: "arrow.left.arrow.right")
+                .font(.system(size: 15))
+                .foregroundStyle(Theme.muted)
+            Text("No projects yet")
                 .font(.system(size: 11))
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(Theme.muted)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 14)
@@ -117,7 +103,7 @@ struct StripView: View {
 
     private var grip: some View {
         Capsule()
-            .fill(Color.white.opacity(0.22))
+            .fill(Color.secondary.opacity(0.35))
             .frame(width: 24, height: 3)
             .frame(maxWidth: .infinity)
             .frame(height: Strip.gripHeight)
@@ -140,28 +126,23 @@ struct StripView: View {
 
     private func projectRow(_ project: Project) -> some View {
         let folded = strip.collapsed.contains(project.id)
+        let live = running(project)
         return HStack(spacing: 8) {
-            RoundedRectangle(cornerRadius: 3, style: .continuous)
-                .fill(Theme.tint(project.tint))
-                .frame(width: 8, height: 8)
-                .matchedGeometryEffect(id: project.id, in: berth)
             Text(project.name)
-                .font(.system(size: 12.5, weight: .semibold))
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(Theme.ink)
                 .lineLimit(1)
                 .truncationMode(.middle)
             Spacer(minLength: 4)
-            if running(project) > 0 {
-                Text("\(running(project))")
-                    .font(.system(size: 10, weight: .semibold).monospacedDigit())
-                    .foregroundStyle(ServiceStatus.running.color)
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 1)
-                    .background(Capsule().fill(ServiceStatus.running.color.opacity(0.14)))
+            if live > 0 {
+                Text("\(live) running")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Theme.muted)
             }
-            Image(systemName: "chevron.down")
-                .font(.system(size: 8, weight: .bold))
-                .foregroundStyle(.tertiary)
-                .rotationEffect(.degrees(folded ? -90 : 0))
+            Image(systemName: "arrow.down")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(Theme.muted.opacity(0.8))
+                .rotationEffect(.degrees(folded ? 0 : 180))
         }
         .padding(.horizontal, 12)
         .frame(height: Strip.rowHeight)
@@ -178,22 +159,22 @@ struct StripView: View {
 
     @ViewBuilder
     private func services(of project: Project) -> some View {
-        VStack(spacing: 1) {
+        VStack(spacing: 0) {
             if project.services.isEmpty {
                 HStack {
-                    Text("no services")
+                    Text("No services")
                         .font(.system(size: 11))
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(Theme.muted.opacity(0.8))
                     Spacer(minLength: 0)
                 }
-                .padding(.leading, 28)
+                .padding(.leading, 33)
                 .frame(height: Strip.serviceHeight)
             }
             ForEach(project.services) { service in
                 serviceRow(service, in: project)
             }
         }
-        .padding(.bottom, 6)
+        .padding(.bottom, 4)
     }
 
     private func serviceRow(_ service: Service, in project: Project) -> some View {
@@ -204,25 +185,20 @@ struct StripView: View {
         } label: {
             HStack(spacing: 9) {
                 Image(systemName: status.isLive ? "stop.fill" : "play.fill")
-                    .font(.system(size: 8, weight: .black))
-                    .foregroundStyle(status.isLive ? Color.white : Color.white.opacity(0.75))
-                    .frame(width: 18, height: 18)
-                    .background(
-                        Circle().fill(status.isLive
-                                      ? ServiceStatus.running.color.opacity(0.22)
-                                      : Color.white.opacity(0.09))
-                    )
+                    .font(.system(size: 11))
+                    .foregroundStyle(status.isLive ? Theme.ink : Theme.muted)
+                    .frame(width: 13)
                 Text(service.name)
-                    .font(.system(size: 11.5, weight: .medium))
+                    .font(.system(size: 12))
+                    .foregroundStyle(status.isLive ? Theme.ink : Theme.muted)
                     .lineLimit(1)
                 Spacer(minLength: 4)
                 trailing(status: status, port: port)
                     .id(trailingKey(status: status, port: port))
-                    .transition(.opacity.combined(with: .move(edge: .trailing)))
+                    .transition(.opacity)
             }
-            .padding(.leading, 9)
-            .padding(.trailing, 11)
-            .frame(height: Strip.serviceHeight - 1)
+            .padding(.horizontal, 12)
+            .frame(height: Strip.serviceHeight)
             .contentShape(Rectangle())
         }
         .buttonStyle(StripRowStyle())
@@ -234,17 +210,21 @@ struct StripView: View {
     private func trailing(status: ServiceStatus, port: Int?) -> some View {
         switch status {
         case .running:
-            Text(port.map { ":\($0)" } ?? "up")
-                .font(.system(size: 10, design: .monospaced))
+            Text(port.map { ":\($0)" } ?? "running")
+                .font(.system(size: 11).monospacedDigit())
                 .foregroundStyle(ServiceStatus.running.color)
         case .starting:
-            Circle().fill(ServiceStatus.starting.color).frame(width: 5, height: 5)
+            Text("starting")
+                .font(.system(size: 11))
+                .foregroundStyle(ServiceStatus.starting.color)
         case .failed(let code):
-            Text(code.map { "exit \($0)" } ?? "exit")
-                .font(.system(size: 10, design: .monospaced))
+            Text(code.map { "exit \($0)" } ?? "exited")
+                .font(.system(size: 11).monospacedDigit())
                 .foregroundStyle(ServiceStatus.failed(nil).color)
         case .stopped:
-            Color.clear.frame(width: 1, height: 1)
+            Text("stopped")
+                .font(.system(size: 11))
+                .foregroundStyle(Theme.muted.opacity(0.7))
         }
     }
 
@@ -254,24 +234,6 @@ struct StripView: View {
 
     private func running(_ project: Project) -> Int {
         project.services.filter { runner.status(of: $0).isLive }.count
-    }
-}
-
-private struct Wake: View {
-    let tint: Color
-    let visible: Bool
-    let animated: Bool
-    @State private var pulsing = false
-
-    var body: some View {
-        Capsule()
-            .fill(tint)
-            .frame(width: 14, height: 2)
-            .opacity(visible ? (pulsing ? 1 : 0.45) : 0)
-            .animation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true),
-                       value: pulsing)
-            .onAppear { pulsing = animated && visible }
-            .onChange(of: visible) { _, now in pulsing = animated && now }
     }
 }
 
@@ -297,11 +259,7 @@ private struct Arrival: ViewModifier {
 private struct StripRowStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .background(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(Color.white.opacity(configuration.isPressed ? 0.12 : 0))
-                    .padding(.horizontal, 6)
-            )
+            .background(Theme.accent.opacity(configuration.isPressed ? 0.3 : 0))
     }
 }
 
