@@ -151,24 +151,26 @@ footer{padding:26px 0 60px;color:var(--dim);font-size:13px;display:flex;
 
 <div class="art">
 <pre>
-┌──────────────┬─────────────────────────────────────────────────┐
-│ <b>●</b> nott     <span class="g">2</span> │ <b>nott</b>                  start all   <span class="acc">✦</span> magic   +   │
-│ ● ustad      │ ~/Documents/GitHub/nott                         │
-│ ● medvise    │                                                 │
-│ ● harbor     │  ■  backend                                   › │
-│              │       <span class="g">●</span> running · <span class="g">:4000</span>                         │
-│ + add        │                                                 │
-│              │  ■  client                                    › │
-│              │       <span class="g">●</span> running · <span class="g">:3000</span>                         │
-│              │                                                 │
-│              │  ▶  horizon                                   › │
-│              │       ○ stopped                                 │
-│              │                                                 │
-│ ‹ collapse   │  ▶  admin                                     › │
-│              │       <span class="r">✕</span> exited (1) · :3000 held by node (4821)  │
-└──────────────┴─────────────────────────────────────────────────┘
+┌──────────────┬───────────────────────────────────────────────────┐
+│              │  ▶  ■                                <span class="acc">✦</span>    +       │
+│ <b>●</b> nott     <span class="g">2</span> ┼───────────────────────────────────────────────────│
+│ ● ustad      │ <b>nott</b>                                              │
+│ ● medvise    │ Documents › GitHub › <b>nott</b>                         │
+│              │                                                   │
+│              │ Services                         2 of 4 running   │
+│              │  ■  backend    npm run dev              <span class="g">:4000</span>  <span class="acc">↓</span>  │
+│              │  ───────────────────────────────────────────────  │
+│              │  ■  client     npm run dev              <span class="g">:3000</span>  <span class="acc">↓</span>  │
+│              │  ───────────────────────────────────────────────  │
+│              │  ▶  horizon    php artisan horizon             <span class="acc">↓</span>  │
+│              │  ───────────────────────────────────────────────  │
+│              │  ▶  admin      npm run dev            <span class="r">exit 1</span>   <span class="acc">↓</span>  │
+│ + Add project│                                                   │
+└──────────────┴───────────────────────────────────────────────────┘
 </pre>
-<p class="cap">The window is where you set things up: add a folder, edit a service, read its output.</p>
+<p class="cap">The window is where you set things up: a source list of projects on the left, the folder as a
+path control you can click through, and every service as a row with its command, its port and the arrow that
+opens its output. Start all and stop all live in the toolbar.</p>
 <pre class="wide" style="margin-top:26px">
  ┌──────┐          ┌──────────────────────┐
  │  <b>N</b>   │          │         ───          │
