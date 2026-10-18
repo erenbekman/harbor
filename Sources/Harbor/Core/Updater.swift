@@ -12,6 +12,9 @@ final class Updater: ObservableObject {
 
     static let repository = "erenbekman/harbor"
     static let assetName = "Harbor.zip"
+    private static let allowedHosts: Set<String> = [
+        "github.com", "objects.githubusercontent.com", "release-assets.githubusercontent.com",
+    ]
 
     enum State: Equatable {
         case idle
@@ -57,13 +60,13 @@ final class Updater: ObservableObject {
     }
 
     func install() {
-        guard case let .available(_, url, _) = state else { return }
+        guard case let .available(version, url, _) = state else { return }
         state = .downloading
         Task {
             do {
                 let zip = try await download(url)
                 state = .installing
-                try replaceBundle(with: zip)
+                try replaceBundle(with: zip, version: version)
             } catch {
                 state = .failed(Self.describe(error))
             }
@@ -101,6 +104,10 @@ final class Updater: ObservableObject {
               let assetURL = URL(string: link)
         else { throw UpdateError.message("The release has no \(Self.assetName).") }
 
+        guard assetURL.scheme == "https", let host = assetURL.host,
+              Self.allowedHosts.contains(host)
+        else { throw UpdateError.message("The release points somewhere unexpected: \(assetURL.host ?? "?")") }
+
         let notes = (json["body"] as? String) ?? ""
         return Release(version: tag.hasPrefix("v") ? String(tag.dropFirst()) : tag,
                        asset: assetURL,
@@ -122,7 +129,24 @@ final class Updater: ObservableObject {
     /// A running bundle cannot overwrite itself, so the swap is handed to a shell
     /// script: the app quits, the script replaces the bundle and opens it again.
     /// Services are in tmux and are not touched by any of this.
-    private func replaceBundle(with zip: URL) throws {
+    private func verify(_ app: URL, version: String) throws {
+        guard let info = NSDictionary(contentsOf: app.appendingPathComponent("Contents/Info.plist"))
+                as? [String: Any]
+        else { throw UpdateError.message("The download has no Info.plist.") }
+
+        guard let identifier = info["CFBundleIdentifier"] as? String,
+              identifier == Bundle.main.bundleIdentifier
+        else { throw UpdateError.message("The download is a different application.") }
+
+        guard let shipped = info["CFBundleShortVersionString"] as? String, shipped == version
+        else { throw UpdateError.message("The download is not version \(version).") }
+
+        let signature = Shell.run("/usr/bin/codesign", ["--verify", "--deep", "--strict", app.path])
+        guard signature.status == 0
+        else { throw UpdateError.message("The download's signature does not check out.") }
+    }
+
+    private func replaceBundle(with zip: URL, version: String) throws {
         let unpacked = FileManager.default.temporaryDirectory
             .appendingPathComponent("Harbor-update", isDirectory: true)
         try? FileManager.default.removeItem(at: unpacked)
@@ -135,6 +159,8 @@ final class Updater: ObservableObject {
             .contentsOfDirectory(at: unpacked, includingPropertiesForKeys: nil)
             .first(where: { $0.pathExtension == "app" })
         else { throw UpdateError.message("No application inside the archive.") }
+
+        try verify(newApp, version: version)
 
         let destination = Bundle.main.bundleURL
         let script = """

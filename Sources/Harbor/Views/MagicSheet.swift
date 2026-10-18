@@ -107,6 +107,14 @@ struct MagicSheet: View {
                                 }
                                 Text(suggestion.command)
                                     .font(.system(size: 11, design: .monospaced))
+                                if Self.risky(suggestion.command) {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "exclamationmark.triangle.fill")
+                                        Text("Runs code from somewhere else — read it before you add it.")
+                                    }
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(ServiceStatus.failed(nil).color)
+                                }
                                 if let why = suggestion.why, !why.isEmpty {
                                     Text(why)
                                         .font(.system(size: 10))
@@ -151,6 +159,12 @@ struct MagicSheet: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    static func risky(_ command: String) -> Bool {
+        let lowered = command.lowercased()
+        return ["| sh", "|sh", "| bash", "|bash", "curl ", "wget ", "sudo ", "rm -rf",
+                "chmod 777", "base64", "eval ", "> /dev/", "nc "].contains { lowered.contains($0) }
+    }
+
     private func scan() async {
         let target = project
         let outcome: Result<Magic.Answer, Error> = await Task.detached(priority: .userInitiated) {
@@ -159,7 +173,7 @@ struct MagicSheet: View {
 
         switch outcome {
         case .success(let answer):
-            picked = Set(answer.services.map(\.id))
+            picked = Set(answer.services.filter { !Self.risky($0.command) }.map(\.id))
             state = .done(answer)
         case .failure(let error):
             state = .failed(error.localizedDescription)

@@ -238,7 +238,7 @@ private struct ServiceRow: View {
                     Text(":\(conflict.port) is held by \(conflict.command) (\(conflict.pid))")
                         .font(.system(size: 12))
                     Spacer()
-                    Button("Free port") { runner.freeConflict(service) }
+                    Button("Free port") { confirmFree(conflict) }
                         .controlSize(.small)
                 }
                 .padding(.horizontal, 10)
@@ -264,6 +264,17 @@ private struct ServiceRow: View {
                 store.removeService(service, from: project)
             }
         }
+    }
+
+    private func confirmFree(_ conflict: PortConflict) {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "Stop \(conflict.command) (\(conflict.pid))?"
+        alert.informativeText = "It is holding port \(conflict.port). Harbor did not start this process, and stopping it may lose unsaved work."
+        alert.addButton(withTitle: "Stop it")
+        alert.addButton(withTitle: "Cancel")
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        runner.freeConflict(service)
     }
 
     private func statusLabel(_ status: ServiceStatus) -> String {

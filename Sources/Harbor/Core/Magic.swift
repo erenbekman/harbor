@@ -97,6 +97,10 @@ enum Magic {
     private static func log(command: String, status: Int32, output: String) {
         let entry = "--- \(Date()) exit \(status)\n\(command.prefix(400))\n\(output.prefix(4000))\n\n"
         let url = Paths.support.appendingPathComponent("magic.log")
+        if !FileManager.default.fileExists(atPath: url.path) {
+            FileManager.default.createFile(atPath: url.path, contents: nil,
+                                           attributes: [.posixPermissions: 0o600])
+        }
         if let handle = try? FileHandle(forWritingTo: url) {
             handle.seekToEndOfFile()
             handle.write(Data(entry.utf8))
