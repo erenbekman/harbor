@@ -2,6 +2,8 @@
 
 A rail of projects, and every project's dev servers one click away.
 
+<p align="center"><img src=".github/screenshot.png" alt="Harbor window with a project's services and their ports" width="760"></p>
+
 **[harbor's page →](https://erenbekman.github.io/harbor/)**
 
 Harbor is a small native macOS app for the thing you do before you write any code:
