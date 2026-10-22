@@ -25,10 +25,10 @@ struct StripView: View {
 
     private var panel: some View {
         let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
-        return VisualEffect(material: .popover, blending: .behindWindow)
-            .clipShape(shape)
-            .overlay(shape.strokeBorder(Theme.line, lineWidth: 0.5))
-            .shadow(color: .black.opacity(0.28), radius: 14, x: -2, y: 6)
+        return shape
+            .fill(Theme.raised)
+            .overlay(shape.strokeBorder(Theme.line, lineWidth: 1))
+            .shadow(color: .black.opacity(0.45), radius: 16, x: -3, y: 8)
     }
 
     private var closed: some View {
@@ -46,21 +46,14 @@ struct StripView: View {
     private func chip(_ project: Project) -> some View {
         let live = running(project) > 0
         return RoundedRectangle(cornerRadius: 8, style: .continuous)
-            .fill(live ? Theme.control : Theme.hover)
+            .fill(live ? Theme.accent : Theme.control)
             .frame(width: Strip.chipSize, height: Strip.chipSize)
             .overlay(
                 Text(project.badge)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(live ? Theme.ink : Theme.muted)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(live ? Color.white : Theme.muted)
             )
-            .overlay(alignment: .topTrailing) {
-                if live {
-                    Circle()
-                        .fill(Theme.accent)
-                        .frame(width: 7, height: 7)
-                        .offset(x: 2, y: -2)
-                }
-            }
+
     }
 
     private var expandedBody: some View {
@@ -127,19 +120,20 @@ struct StripView: View {
         let folded = strip.collapsed.contains(project.id)
         let live = running(project)
         return HStack(spacing: 8) {
-            Text(project.name)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(Theme.ink)
+            Text(project.name.uppercased())
+                .font(.system(size: 11, weight: .semibold))
+                .tracking(0.6)
+                .foregroundStyle(Theme.faint)
                 .lineLimit(1)
                 .truncationMode(.middle)
             Spacer(minLength: 4)
             if live > 0 {
                 Text("\(live) running")
-                    .font(.system(size: 11))
-                    .foregroundStyle(Theme.muted)
+                    .font(.system(size: 10))
+                    .foregroundStyle(Theme.faint)
             }
             Image(systemName: "arrow.down")
-                .font(.system(size: 10, weight: .semibold))
+                .font(.system(size: 9, weight: .semibold))
                 .foregroundStyle(Theme.faint)
                 .rotationEffect(.degrees(folded ? 0 : 180))
         }
@@ -179,56 +173,46 @@ struct StripView: View {
     private func serviceRow(_ service: Service, in project: Project) -> some View {
         let status = runner.status(of: service)
         let port = runner.port(of: service)
-        return Button {
-            runner.toggle(service, in: project)
-        } label: {
-            HStack(spacing: 9) {
-                Image(systemName: status.isLive ? "stop.fill" : "play.fill")
-                    .font(.system(size: 11))
-                    .foregroundStyle(status.isLive ? Theme.ink : Theme.muted)
-                    .frame(width: 13)
+        return HStack(spacing: 10) {
+            Circle()
+                .fill(status.color)
+                .frame(width: 7, height: 7)
+
+            VStack(alignment: .leading, spacing: 1) {
                 Text(service.name)
-                    .font(.system(size: 12))
-                    .foregroundStyle(status.isLive ? Theme.ink : Theme.muted)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Theme.ink)
                     .lineLimit(1)
-                Spacer(minLength: 4)
-                trailing(status: status, port: port)
-                    .id(trailingKey(status: status, port: port))
-                    .transition(.opacity)
+                Text(trailing(status, port))
+                    .font(.system(size: 10))
+                    .foregroundStyle(Theme.faint)
+                    .lineLimit(1)
             }
-            .padding(.horizontal, 12)
-            .frame(height: Strip.serviceHeight)
-            .contentShape(Rectangle())
+
+            Spacer(minLength: 4)
+
+            Button { runner.toggle(service, in: project) } label: {
+                Image(systemName: status.isLive ? "stop.fill" : "play.fill")
+                    .font(.system(size: 10))
+                    .foregroundStyle(status.isLive ? Theme.ink : Theme.muted)
+                    .frame(width: 20, height: 22)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.borderless)
+            .help(status.isLive ? "Stop" : "Start")
         }
-        .buttonStyle(StripRowStyle())
-        .animation(reduceMotion ? .linear(duration: 0.1) : .easeOut(duration: 0.25),
-                   value: trailingKey(status: status, port: port))
+        .padding(.horizontal, 12)
+        .frame(height: Strip.serviceHeight)
+        .help(service.command)
     }
 
-    @ViewBuilder
-    private func trailing(status: ServiceStatus, port: Int?) -> some View {
+    private func trailing(_ status: ServiceStatus, _ port: Int?) -> String {
         switch status {
-        case .running:
-            Text(port.map { ":\($0)" } ?? "running")
-                .font(.system(size: 11).monospacedDigit())
-                .foregroundStyle(ServiceStatus.running.color)
-        case .starting:
-            Text("starting")
-                .font(.system(size: 11))
-                .foregroundStyle(ServiceStatus.starting.color)
-        case .failed(let code):
-            Text(code.map { "exit \($0)" } ?? "exited")
-                .font(.system(size: 11).monospacedDigit())
-                .foregroundStyle(ServiceStatus.failed(nil).color)
-        case .stopped:
-            Text("stopped")
-                .font(.system(size: 11))
-                .foregroundStyle(Theme.faint)
+        case .running: return port.map { "running · :\($0)" } ?? "running"
+        case .starting: return "starting"
+        case .stopped: return "stopped"
+        case .failed(let code): return code.map { "exit \($0)" } ?? "exited"
         }
-    }
-
-    private func trailingKey(status: ServiceStatus, port: Int?) -> String {
-        "\(status)-\(port ?? 0)"
     }
 
     private func running(_ project: Project) -> Int {

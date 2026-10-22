@@ -53,9 +53,10 @@ struct ServicesPanel: View {
 
     private var sectionLabel: some View {
         HStack(spacing: 8) {
-            Text("Services")
+            Text("SERVICES")
                 .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(Theme.muted)
+                .tracking(0.6)
+                .foregroundStyle(Theme.faint)
             Spacer()
             if project.services.count >= 5 {
                 HStack(spacing: 4) {
@@ -170,25 +171,19 @@ private struct ServiceRow: View {
         let port = runner.port(of: service)
 
         VStack(spacing: 0) {
-            HStack(spacing: 10) {
-                Button { runner.toggle(service, in: project) } label: {
-                    Image(systemName: status.isLive ? "stop.fill" : "play.fill")
-                        .font(.system(size: 10))
-                        .foregroundStyle(status.isLive ? Theme.ink : Theme.muted)
-                        .frame(width: 16, height: 20)
-                        .contentShape(Rectangle())
+            HStack(spacing: 11) {
+                Circle()
+                    .fill(status.color)
+                    .frame(width: 8, height: 8)
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(service.name)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(Theme.ink)
+                    Text(secondary(status, port))
+                        .font(.system(size: 11))
+                        .foregroundStyle(Theme.faint)
                 }
-                .buttonStyle(.borderless)
-                .help(status.isLive ? "Stop" : "Start")
-
-                Text(service.name)
-                    .font(.system(size: 13))
-
-                Text(service.command)
-                    .font(.system(size: 12))
-                    .foregroundStyle(Theme.faint)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
 
                 Spacer(minLength: 8)
 
@@ -196,20 +191,15 @@ private struct ServiceRow: View {
                     Button {
                         NSWorkspace.shared.open(URL(string: "http://localhost:\(port)")!)
                     } label: {
-                        HStack(spacing: 3) {
-                            Text(":\(port)")
-                                .font(.system(size: 12).monospacedDigit())
-                            Image(systemName: "arrow.up.right")
-                                .font(.system(size: 9, weight: .semibold))
-                        }
-                        .foregroundStyle(Theme.accent)
+                        Image(systemName: "arrow.up.right")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Theme.accent)
+                            .frame(width: 20, height: 24)
+                            .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.borderless)
                     .help("Open http://localhost:\(port)")
-                } else if status != .stopped {
-                    Text(statusLabel(status))
-                        .font(.system(size: 12))
-                        .foregroundStyle(status.color)
+                    .opacity(hovered ? 1 : 0)
                 }
 
                 Button(action: toggleLog) {
@@ -217,19 +207,30 @@ private struct ServiceRow: View {
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(Theme.faint)
                         .rotationEffect(.degrees(expanded ? 180 : 0))
-                        .frame(width: 16, height: 20)
+                        .frame(width: 20, height: 24)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.borderless)
                 .help(expanded ? "Hide output" : "Show output")
                 .opacity(hovered || expanded ? 1 : 0)
+
+                Button { runner.toggle(service, in: project) } label: {
+                    Image(systemName: status.isLive ? "stop.fill" : "play.fill")
+                        .font(.system(size: 12))
+                        .foregroundStyle(status.isLive ? Theme.ink : Theme.muted)
+                        .frame(width: 22, height: 24)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.borderless)
+                .help(status.isLive ? "Stop" : "Start")
             }
-            .padding(.horizontal, 8)
-            .frame(height: 32)
+            .padding(.horizontal, 10)
+            .frame(height: 44)
             .background(
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
                     .fill(hovered ? Theme.hover : .clear)
             )
+            .help(service.command)
 
             if let conflict = runner.conflict(of: service) {
                 HStack(spacing: 8) {
@@ -277,9 +278,9 @@ private struct ServiceRow: View {
         runner.freeConflict(service)
     }
 
-    private func statusLabel(_ status: ServiceStatus) -> String {
+    private func secondary(_ status: ServiceStatus, _ port: Int?) -> String {
         switch status {
-        case .running: return "running"
+        case .running: return port.map { "running · :\($0)" } ?? "running"
         case .starting: return "starting"
         case .stopped: return "stopped"
         case .failed(let code): return code.map { "exit \($0)" } ?? "exited"

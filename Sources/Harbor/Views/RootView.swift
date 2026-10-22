@@ -34,6 +34,9 @@ struct ProjectSidebar: View {
             .onMove { from, to in store.move(from: from, to: to) }
         }
         .listStyle(.sidebar)
+        .tint(Theme.accent)
+        .scrollContentBackground(.hidden)
+        .background(Theme.base)
         .environment(\.defaultMinListRowHeight, 26)
         .overlay {
             if store.projects.isEmpty {

@@ -12,7 +12,7 @@ enum Mark {
 
     static func draw(size: CGFloat, filled: Bool, stroke: NSColor, head: NSColor) {
         let s = size / 24
-        let width = max(1, 2 * s)
+        let width = max(1, 2.4 * s)
 
         let circle = NSBezierPath(ovalIn: NSRect(x: (12 - 3) * s, y: (15.8 - 3) * s,
                                                  width: 6 * s, height: 6 * s))

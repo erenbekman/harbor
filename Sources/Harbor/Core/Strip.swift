@@ -18,7 +18,7 @@ final class Strip: ObservableObject {
     static let chipSize: CGFloat = 30
     static let chipSpacing: CGFloat = 7
     static let rowHeight: CGFloat = 30
-    static let serviceHeight: CGFloat = 30
+    static let serviceHeight: CGFloat = 38
     static let padding: CGFloat = 9
     static let gripHeight: CGFloat = 12
 

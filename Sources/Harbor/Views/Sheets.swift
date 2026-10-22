@@ -6,10 +6,10 @@ private struct FieldBox<Content: View>: View {
 
     var body: some View {
         content
-            .padding(.horizontal, 9)
-            .frame(height: 26)
+            .padding(.horizontal, 11)
+            .frame(height: 32)
             .background(
-                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
                     .stroke(Theme.line, lineWidth: 1)
             )
     }
@@ -20,13 +20,12 @@ private struct FormRow<Content: View>: View {
     @ViewBuilder var content: Content
 
     var body: some View {
-        HStack(alignment: .center, spacing: 12) {
-            Text(label)
-                .font(.system(size: 12))
-                .foregroundStyle(Theme.muted)
-                .frame(width: 92, alignment: .leading)
-            content
-            Spacer(minLength: 0)
+        VStack(alignment: .leading, spacing: 5) {
+            Text(label.uppercased())
+                .font(.system(size: 11, weight: .semibold))
+                .tracking(0.6)
+                .foregroundStyle(Theme.faint)
+            HStack(spacing: 8) { content }
         }
     }
 }
@@ -37,17 +36,19 @@ private struct SheetFrame<Content: View, Actions: View>: View {
     @ViewBuilder var actions: Actions
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 18) {
             Text(title)
-                .font(.system(size: 15, weight: .semibold))
-            VStack(alignment: .leading, spacing: 10) { content }
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(Theme.ink)
+            VStack(alignment: .leading, spacing: 14) { content }
             Divider().opacity(0.6)
             HStack(spacing: 8) {
                 Spacer()
                 actions
             }
         }
-        .padding(18)
+        .padding(22)
+        .background(Theme.raised)
     }
 }
 
@@ -125,6 +126,7 @@ struct ProjectSheet: View {
                 .keyboardShortcut(.cancelAction)
             Button(project == nil ? "Add" : "Save", action: save)
                 .buttonStyle(.borderedProminent)
+                .tint(Theme.accent)
                 .keyboardShortcut(.defaultAction)
                 .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || path.isEmpty)
         }
@@ -227,6 +229,7 @@ struct ServiceSheet: View {
                 .keyboardShortcut(.cancelAction)
             Button(service == nil ? "Add" : "Save", action: save)
                 .buttonStyle(.borderedProminent)
+                .tint(Theme.accent)
                 .keyboardShortcut(.defaultAction)
                 .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty
                           || command.trimmingCharacters(in: .whitespaces).isEmpty)

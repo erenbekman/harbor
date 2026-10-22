@@ -66,6 +66,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         splitController = split
 
         let window = NSWindow(contentViewController: split)
+        window.appearance = NSAppearance(named: .darkAqua)
         window.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
         window.title = "Harbor"
         window.titleVisibility = .hidden
@@ -239,6 +240,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         tabs.addTabViewItem(about)
 
         let window = NSWindow(contentViewController: tabs)
+        window.appearance = NSAppearance(named: .darkAqua)
         window.styleMask = [.titled, .closable]
         window.title = "Harbor Settings"
         window.isReleasedWhenClosed = false

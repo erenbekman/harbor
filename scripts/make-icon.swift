@@ -14,32 +14,38 @@ func color(_ hex: UInt32, _ alpha: CGFloat = 1) -> NSColor {
             blue: CGFloat(hex & 0xFF) / 255, alpha: alpha)
 }
 
-let plateTop = color(0x3C424B)
-let plateBottom = color(0x1B1F24)
-let accent = color(0x0A84FF)
-let ink = color(0xFFFFFF, 0.95)
+let plateTop = color(0xE2A184)
+let plateBottom = color(0xC9765A)
+let accent = color(0xFFFFFF)
+let ink = color(0xFFFFFF)
 
-func draw(_ px: Int) -> NSImage {
+func draw(_ px: Int) -> NSBitmapImageRep {
     let size = CGFloat(px)
-    let image = NSImage(size: NSSize(width: size, height: size))
-    image.lockFocus()
+    guard let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: px, pixelsHigh: px,
+                                     bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true,
+                                     isPlanar: false, colorSpaceName: .deviceRGB,
+                                     bytesPerRow: 0, bitsPerPixel: 0)
+    else { fatalError("no bitmap") }
+    rep.size = NSSize(width: size, height: size)
+
+    NSGraphicsContext.saveGraphicsState()
+    NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
 
     let plate = NSBezierPath(roundedRect: NSRect(x: 100 * size / 1024, y: 100 * size / 1024,
                                                  width: 824 * size / 1024, height: 824 * size / 1024),
                              xRadius: 185 * size / 1024, yRadius: 185 * size / 1024)
     NSGradient(starting: plateTop, ending: plateBottom)?.draw(in: plate, angle: -90)
 
-    let inset = size * 0.22
-    let markSize = size - inset * 2
+    let inset = size * 0.17
     NSGraphicsContext.current?.saveGraphicsState()
     let shift = NSAffineTransform()
     shift.translateX(by: inset, yBy: inset)
     shift.concat()
-    Mark.draw(size: markSize, filled: true, stroke: ink, head: accent)
+    Mark.draw(size: size - inset * 2, filled: true, stroke: ink, head: accent)
     NSGraphicsContext.current?.restoreGraphicsState()
 
-    image.unlockFocus()
-    return image
+    NSGraphicsContext.restoreGraphicsState()
+    return rep
 }
 
 let fm = FileManager.default
@@ -48,10 +54,7 @@ try? fm.removeItem(at: out)
 try? fm.createDirectory(at: out, withIntermediateDirectories: true)
 
 for (name, px) in sizes {
-    let image = draw(px)
-    guard let tiff = image.tiffRepresentation,
-          let rep = NSBitmapImageRep(data: tiff),
-          let png = rep.representation(using: .png, properties: [:]) else { continue }
+    guard let png = draw(px).representation(using: .png, properties: [:]) else { continue }
     try? png.write(to: out.appendingPathComponent("\(name).png"))
 }
 print("✓ AppIcon.iconset")
