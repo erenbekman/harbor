@@ -38,6 +38,16 @@ struct GeneralSettings: View {
             }
 
             Section {
+                AgentsRow()
+            } header: {
+                Text("Coding agents")
+            } footer: {
+                Text("Claude Code and Codex can list, start, stop and read the logs of the services you registered here — nothing else. They cannot add a service, run a command of their own, or kill a process. Allow mcp__harbor__list_services and mcp__harbor__read_logs without asking; leave starting and stopping to a prompt.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
                 LabeledContent("Run in", value: "tmux")
                 LabeledContent("Socket", value: Tmux.socketPath)
             } header: {
@@ -61,6 +71,94 @@ struct GeneralSettings: View {
         } catch {
             self.error = error.localizedDescription
             openAtLogin = SMAppService.mainApp.status == .enabled
+        }
+    }
+}
+
+private struct AgentsRow: View {
+    @State private var registered: Bool?
+    @State private var message = ""
+    @State private var working = false
+
+    private var command: String {
+        Bundle.main.executableURL?.path ?? Bundle.main.bundlePath
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            LabeledContent("Claude Code") {
+                HStack(spacing: 10) {
+                    Text(registered == true ? "Connected" : registered == false ? "Not connected" : "…")
+                        .foregroundStyle(.secondary)
+                    Button(registered == true ? "Re-add" : "Add to Claude Code") { add() }
+                        .disabled(working)
+                }
+            }
+
+            LabeledContent("Codex") {
+                Button("Copy config") {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(codexConfig, forType: .string)
+                    message = "Codex config copied — paste it into ~/.codex/config.toml."
+                }
+            }
+
+            if !Bundle.main.bundlePath.hasPrefix("/Applications/") {
+                Text("Harbor is running from \(Bundle.main.bundlePath). The agent will be pointed at that copy.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color(nsColor: .systemOrange))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if !message.isEmpty {
+                Text(message)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .task { check() }
+    }
+
+    private var codexConfig: String {
+        let escaped = command
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+        return "[mcp_servers.harbor]\ncommand = \"\(escaped)\"\nargs = [\"mcp\"]"
+    }
+
+    private func check() {
+        let expected = command
+        Task.detached {
+            let result = Shell.run("/bin/zsh", ["-l", "-c", "claude mcp get harbor"], timeout: 20)
+            let exists = result.status == 0
+            let matches = exists && result.output.contains(expected)
+            await MainActor.run {
+                registered = matches
+                if exists, !matches {
+                    message = "Claude Code has a harbor server registered, but it points at another copy. Re-add it to point it here."
+                }
+            }
+        }
+    }
+
+    private func add() {
+        working = true
+        message = ""
+        let quoted = Shell.quoted(command)
+        Task.detached {
+            let result = Shell.run("/bin/zsh",
+                                   ["-l", "-c", "claude mcp remove --scope user harbor >/dev/null 2>&1; "
+                                    + "claude mcp add --scope user harbor -- \(quoted) mcp"],
+                                   timeout: 30)
+            let text = result.output.trimmingCharacters(in: .whitespacesAndNewlines)
+            await MainActor.run {
+                working = false
+                message = result.status == 0
+                    ? "Added. Restart Claude Code to pick it up."
+                    : (text.isEmpty ? "Could not add it — is the claude command installed?" : text)
+                check()
+            }
         }
     }
 }

@@ -7,7 +7,8 @@ import Foundation
 /// different `TMUX_TMPDIR` values and would end up on two separate servers.
 enum Tmux {
 
-    static let socketPath = "/tmp/harbor-\(getuid()).sock"
+    static let socketPath = ProcessInfo.processInfo.environment["HARBOR_TMUX_SOCKET"]
+        ?? "/tmp/harbor-\(getuid()).sock"
 
     static let path: String? = Shell.findExecutable([
         "/opt/homebrew/bin/tmux", "/usr/local/bin/tmux",
@@ -28,17 +29,18 @@ enum Tmux {
         try? body.write(to: Paths.tmuxConfig, atomically: true, encoding: .utf8)
     }
 
-    struct PaneState {
+    struct PaneState: Sendable {
         let dead: Bool
         let exitCode: Int?
         let pid: Int32
+        let origin: String?
     }
 
     /// Every session's pane state in ONE call — a fork per service, twice a
     /// second, is exactly the cost this avoids.
     static func paneStates() -> [String: PaneState] {
         let r = run(["list-panes", "-a", "-F",
-                     "#{session_name}\t#{pane_dead}\t#{pane_dead_status}\t#{pane_pid}"])
+                     "#{session_name}\t#{pane_dead}\t#{pane_dead_status}\t#{pane_pid}\t#{@harbor_origin}"])
         guard r.status == 0 else { return [:] }
         var out: [String: PaneState] = [:]
         for line in r.out.split(separator: "\n") {
@@ -47,7 +49,8 @@ enum Tmux {
             let dead = f[1] != "0"
             out[f[0]] = PaneState(dead: dead,
                                   exitCode: dead ? Int(f[2]) : nil,
-                                  pid: Int32(f[3]) ?? 0)
+                                  pid: Int32(f[3]) ?? 0,
+                                  origin: f.count > 4 ? (f[4].isEmpty ? nil : f[4]) : nil)
         }
         return out
     }
@@ -61,7 +64,8 @@ enum Tmux {
         let dead = first != "0"
         return PaneState(dead: dead,
                          exitCode: dead && f.count > 1 ? Int(f[1]) : nil,
-                         pid: f.count > 2 ? (Int32(f[2]) ?? 0) : 0)
+                         pid: f.count > 2 ? (Int32(f[2]) ?? 0) : 0,
+                         origin: nil)
     }
 
     static func exists(_ name: String) -> Bool {
@@ -77,6 +81,14 @@ enum Tmux {
             + "cd \(Shell.quoted(cwd)) && \(command)"
         let shell = "exec /bin/zsh -l -i -c \(Shell.quoted(inner))"
         _ = run(["new-session", "-d", "-s", session, "-x", "200", "-y", "50", shell])
+    }
+
+    static func markOrigin(_ session: String, _ origin: String?) {
+        if let origin {
+            _ = run(["set-option", "-t", session, "@harbor_origin", origin])
+        } else {
+            _ = run(["set-option", "-t", session, "-u", "@harbor_origin"])
+        }
     }
 
     static func interrupt(_ session: String) {

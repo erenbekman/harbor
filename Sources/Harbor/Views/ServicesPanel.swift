@@ -177,9 +177,19 @@ private struct ServiceRow: View {
                     .frame(width: 8, height: 8)
 
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(service.name)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(Theme.ink)
+                    HStack(spacing: 6) {
+                        Text(service.name)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(Theme.ink)
+                        if status.isLive, runner.origin(of: service) == "agent" {
+                            Text("agent")
+                                .font(.system(size: 9, weight: .medium))
+                                .foregroundStyle(Theme.badgeInk)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 1)
+                                .background(Capsule().fill(Theme.badge))
+                        }
+                    }
                     Text(secondary(status, port))
                         .font(.system(size: 11))
                         .foregroundStyle(Theme.faint)

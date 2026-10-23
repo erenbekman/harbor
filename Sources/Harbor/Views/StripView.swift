@@ -179,10 +179,20 @@ struct StripView: View {
                 .frame(width: 7, height: 7)
 
             VStack(alignment: .leading, spacing: 1) {
-                Text(service.name)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Theme.ink)
-                    .lineLimit(1)
+                HStack(spacing: 5) {
+                    Text(service.name)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Theme.ink)
+                        .lineLimit(1)
+                    if status.isLive, runner.origin(of: service) == "agent" {
+                        Text("agent")
+                            .font(.system(size: 8, weight: .medium))
+                            .foregroundStyle(Theme.badgeInk)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 0.5)
+                            .background(Capsule().fill(Theme.badge))
+                    }
+                }
                 Text(trailing(status, port))
                     .font(.system(size: 10))
                     .foregroundStyle(Theme.faint)

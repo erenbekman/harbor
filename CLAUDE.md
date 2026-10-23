@@ -14,6 +14,8 @@ swift build      # fast compile check
 ./build.sh       # release build + Harbor.app
 ./install.sh     # build + install into /Applications + launch
 ./dist.sh        # release artifact: Harbor.zip (the asset name the updater expects)
+./tests/security/run.sh   # quoting, update integrity, permissions, agent limits
+./tests/mcp/run.sh        # the MCP protocol and its five tools, in an isolated sandbox
 ```
 
 Release flow: bump `VERSION` → `./dist.sh` → commit and push →
@@ -70,6 +72,21 @@ Sources/Harbor/
 - **Never `Process.waitUntilExit()`** — it pumps the run loop, so on the main thread it
   re-enters AppKit underneath its own caller. `Shell.barrier` waits on the termination
   handler instead.
+- **`Harbor mcp` never builds AppKit.** `main.swift` branches on the argument before
+  `NSApplication.shared` is touched; stdout belongs to the protocol, so every diagnostic
+  goes to stderr and nothing else may print. The server reads `projects.json` and starts
+  the SAME tmux session names the app uses, so the app adopts an agent-started service on
+  its next poll — and `@harbor_origin` tells it who started it.
+- **The agent's reach is bounded by what the user registered.** `MCP` may only run a
+  stored `service.command`, and only through `Tmux.start`; it never frees a port, never
+  kills a pid, never writes `projects.json`. An unknown service is an error that names the
+  known ones and tells the agent to ask the user — the refusal is the product.
+- **Project resolution compares CANONICAL paths.** `/tmp` is a symlink to `/private/tmp`
+  on macOS, so an agent running in a folder Harbor knows would otherwise be told its own
+  project does not exist.
+- **The status computation lives in `Snapshot`, not in `Runner`.** Both the app's poll and
+  the MCP tools need the same answer — pane liveness, the port from the process tree, the
+  health probe — and a second implementation would drift from the first within a week.
 - **`Service` and `Project` decode BY HAND.** The synthesized decoder throws on a key
   that is missing even where there is a default, so `autoStart`/`autoRestart`/`health`
   would have failed the whole array and silently emptied every project on upgrade.

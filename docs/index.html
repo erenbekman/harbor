@@ -107,6 +107,7 @@ footer a{color:var(--faint)}
   </a>
   <div class="nav-links">
     <a href="#features">Features</a>
+    <a href="#agents">Agents</a>
     <a href="#how">How it works</a>
     <a href="#install">Install</a>
     <a href="https://github.com/erenbekman/harbor">GitHub</a>
@@ -182,6 +183,34 @@ footer a{color:var(--faint)}
       <h3>⌃⌘H</h3>
       <p>From anywhere: type a project or service name, Enter starts or stops it. The same list lives in the
          menu bar, under a buoy that fills in while something is running.</p>
+    </div>
+  </div>
+</section>
+
+<section id="agents">
+  <h2>Your agent can use it too</h2>
+  <p class="sub">Harbor is an MCP server as well as an app, so Claude Code stops guessing about dev servers.</p>
+<pre>claude mcp add --scope user harbor -- /Applications/Harbor.app/Contents/MacOS/Harbor mcp</pre>
+  <div class="feats" style="margin-top:28px">
+    <div class="feat">
+      <h3>It sees what is already running</h3>
+      <p><code>list_services</code> answers with status, port and URL for the project the agent is working in —
+         so it never starts a second copy of a server you already have up.</p>
+    </div>
+    <div class="feat">
+      <h3>It starts and waits</h3>
+      <p><code>start_service</code> brings one registered service up and waits until it listens or fails, then
+         hands back the port and the last lines of output. <code>read_logs</code> reads the pane itself.</p>
+    </div>
+    <div class="feat">
+      <h3>It cannot improvise</h3>
+      <p>No command of its own, no editing your services, no freeing a port, no killing a pid. An unknown
+         service is a refusal that tells it to ask you.</p>
+    </div>
+    <div class="feat">
+      <h3>You see who started what</h3>
+      <p>A service an agent started carries an <b>agent</b> badge in the window and in the strip — and it keeps
+         running after the agent's session ends, like everything else here.</p>
     </div>
   </div>
 </section>

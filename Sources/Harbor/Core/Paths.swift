@@ -1,16 +1,24 @@
 import Foundation
 
 enum Paths {
+    private static let stateFiles = ["projects.json", "tmux.conf", "magic.log"]
+
     static let support: URL = {
-        let base = FileManager.default
-            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Harbor", isDirectory: true)
+        let override = ProcessInfo.processInfo.environment["HARBOR_SUPPORT_DIR"]
+        let base = override.map { URL(fileURLWithPath: $0, isDirectory: true) }
+            ?? FileManager.default
+                .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+                .appendingPathComponent("Harbor", isDirectory: true)
+        let existed = FileManager.default.fileExists(atPath: base.path)
         try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true,
                                                  attributes: [.posixPermissions: 0o700])
-        try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: base.path)
-        for name in (try? FileManager.default.contentsOfDirectory(atPath: base.path)) ?? [] {
-            try? FileManager.default.setAttributes([.posixPermissions: 0o600],
-                                                   ofItemAtPath: base.appendingPathComponent(name).path)
+        if override == nil || !existed {
+            try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: base.path)
+        }
+        for name in stateFiles {
+            let file = base.appendingPathComponent(name)
+            guard FileManager.default.fileExists(atPath: file.path) else { continue }
+            try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: file.path)
         }
         return base
     }()

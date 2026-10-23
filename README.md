@@ -140,6 +140,39 @@ not quit the app, and quitting does not stop your services.
 Harbor *Open at Login* and it comes up with the Mac. A service that is already running
 in tmux is adopted, never restarted.
 
+## Your agent can use it too
+
+Harbor is an MCP server as well as an app. Point Claude Code at it and the agent stops
+guessing: it can see which dev servers are already running, start one and wait until it
+answers, read the output straight from the pane, and stop it again.
+
+```bash
+claude mcp add --scope user harbor -- /Applications/Harbor.app/Contents/MacOS/Harbor mcp
+```
+
+Settings → General → Coding agents does the same with a button, and copies the Codex
+config for `~/.codex/config.toml`.
+
+| Tool | What it does |
+|---|---|
+| `list_services` | Every service of the project, with status, port and URL |
+| `start_service` | Starts one registered service and waits until it listens or fails |
+| `stop_service` | Stops that service's own tmux session |
+| `restart_service` | Restart and wait |
+| `read_logs` | The pane's recent output, optionally filtered by a substring |
+
+The project is resolved from the agent's working directory, so a plain "start the API"
+works inside a project folder.
+
+**What the agent cannot do.** It cannot run a command of its own, add or edit a service,
+free a port, or kill a process — not even the one holding a port it wants. Those stay with
+you, in the app. A service started by an agent is marked **agent** in the window and in the
+strip, so you always know who started what, and it keeps running after the agent's session
+ends, like every other service here.
+
+Suggested permissions: allow `mcp__harbor__list_services` and `mcp__harbor__read_logs`
+without asking, and leave starting and stopping to a prompt.
+
 ## Per service
 
 | Field | What it does |

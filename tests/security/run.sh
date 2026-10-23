@@ -56,5 +56,14 @@ grep -q "allowedHosts" Sources/Harbor/Core/Updater.swift \
   || { echo "FAIL  no host allowlist in Updater.swift"; fail=1; }
 
 echo
+echo "→ 5. the MCP server cannot run anything the user did not register"
+grep -q "Tmux.start(session: session, cwd: cwd, command: service.command)" Sources/Harbor/Core/MCP.swift \
+  && echo "PASS  it only ever runs a registered service's own command" \
+  || { echo "FAIL  MCP builds a command from somewhere else"; fail=1; }
+grep -qE "Terminals\.free|kill -|pkill|killall" Sources/Harbor/Core/MCP.swift \
+  && { echo "FAIL  MCP can kill a process outside its own session"; fail=1; } \
+  || echo "PASS  MCP never kills a process it did not start"
+
+echo
 [ $fail -eq 0 ] && echo "✓ all checks passed" || echo "✗ findings above"
 exit $fail

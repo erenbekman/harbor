@@ -19,6 +19,8 @@ enum Theme {
     static let muted = Color(hex: 0x8E8E8E)
     static let faint = Color(hex: 0x696969)
     static let accent = Color(hex: 0xD68F70)
+    static let badge = Color(hex: 0x3A3A3A)
+    static let badgeInk = Color(hex: 0xB9B9B9)
 
     static let railWidth: CGFloat = 78
     static let railExpandedWidth: CGFloat = 196

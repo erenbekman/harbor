@@ -1,5 +1,10 @@
 import AppKit
 
+if CommandLine.arguments.dropFirst().first == "mcp" {
+    MCP.run()
+    exit(0)
+}
+
 // The entry point is AppKit, not SwiftUI's `WindowGroup`: the window and the menu
 // bar item are both created deliberately, and neither may be duplicated.
 let app = NSApplication.shared
