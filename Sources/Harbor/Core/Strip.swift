@@ -11,22 +11,23 @@ final class Strip: ObservableObject {
     /// The card floats clear of the screen edge; the WINDOW still reaches it, so
     /// the pointer thrown at the edge opens the strip.
     static let edgeInset: CGFloat = 10
-    static let width: CGFloat = 226
-    /// Closed, the strip is a column of project chips: a 6pt line was easy to
-    /// miss and impossible to aim at.
-    static let closedWidth: CGFloat = 52
-    static let chipSize: CGFloat = 30
-    static let chipSpacing: CGFloat = 7
-    static let rowHeight: CGFloat = 30
+    static let tileSize: CGFloat = 54
+    static let tileSpacing: CGFloat = 8
+    static let railInset: CGFloat = 8
+    static let tileCorner: CGFloat = 16
+    static let railCorner: CGFloat = 22
+    static let cardWidth: CGFloat = 236
+    static let cardCorner: CGFloat = 14
+    static let tailWidth: CGFloat = 8
+    static let tailHeight: CGFloat = 16
+    static let cardPadding: CGFloat = 8
+    static let headerHeight: CGFloat = 30
     static let serviceHeight: CGFloat = 38
-    static let padding: CGFloat = 9
-    static let gripHeight: CGFloat = 12
+    static var railWidth: CGFloat { tileSize + railInset * 2 }
 
     @Published private(set) var installed = false
     @Published private(set) var open = false
-    /// Open, every project lists its services — that is the whole reason to
-    /// look. A project can still be folded away, and it stays folded.
-    @Published private(set) var collapsed: Set<UUID> = []
+    @Published private(set) var focus: UUID?
     /// Where the strip sits on the right edge, as a fraction of the screen, so
     /// it keeps its place when the panel grows or the display changes.
     private var centerFraction: CGFloat =
@@ -65,7 +66,11 @@ final class Strip: ObservableObject {
         hosting.autoresizingMask = [.width, .height]
 
         let container = HoverView()
-        container.onEnter = { [weak self] in self?.hoverBegan() }
+        container.onEnter = { [weak self] point, size in
+            self?.pointerMoved(to: point, in: size)
+            self?.hoverBegan()
+        }
+        container.onMove = { [weak self] point, size in self?.pointerMoved(to: point, in: size) }
         container.onExit = { [weak self] in self?.hoverEnded() }
         hosting.frame = container.bounds
         container.addSubview(hosting)
@@ -82,6 +87,7 @@ final class Strip: ObservableObject {
         panel.hasShadow = false
         panel.level = .statusBar
         panel.isMovable = false
+        panel.acceptsMouseMovedEvents = true
         panel.hidesOnDeactivate = false
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         panel.orderFrontRegardless()
@@ -102,12 +108,6 @@ final class Strip: ObservableObject {
         panel = nil
         open = false
         installed = false
-    }
-
-    func toggle(_ project: Project) {
-        if collapsed.contains(project.id) { collapsed.remove(project.id) }
-        else { collapsed.insert(project.id) }
-        layout()
     }
 
     func openInWindow(_ project: Project) {
@@ -158,29 +158,60 @@ final class Strip: ObservableObject {
 
     // MARK: - Geometry
 
-    /// Heights are ARITHMETIC: AppKit animates the window frame and has to know
-    /// the total before SwiftUI lays anything out.
-    private var openHeight: CGFloat {
-        var height = Self.padding * 2 + Self.gripHeight
-        for project in store.projects {
-            height += Self.rowHeight
-            guard !collapsed.contains(project.id) else { continue }
-            height += CGFloat(max(project.services.count, 1)) * Self.serviceHeight + 6
-        }
-        let ceiling = ((panel?.screen ?? NSScreen.main)?.visibleFrame.height ?? 800) - 24
-        return min(max(height, 70), ceiling)
+    var focusProject: Project? {
+        store.projects.first { $0.id == focus } ?? store.projects.first
     }
 
-    private var closedHeight: CGFloat {
+    /// Heights are ARITHMETIC: AppKit animates the window frame and has to know
+    /// the total before SwiftUI lays anything out.
+    private var railHeight: CGFloat {
         let count = CGFloat(max(store.projects.count, 1))
-        return Self.padding * 2 + count * Self.chipSize + (count - 1) * Self.chipSpacing
+        return Self.railInset * 2 + count * Self.tileSize + (count - 1) * Self.tileSpacing
+    }
+
+    private func cardHeight(_ project: Project) -> CGFloat {
+        Self.cardPadding * 2 + Self.headerHeight
+            + CGFloat(max(project.services.count, 1)) * Self.serviceHeight
+    }
+
+    private var ceiling: CGFloat {
+        ((panel?.screen ?? NSScreen.main)?.visibleFrame.height ?? 800) - 24
+    }
+
+    private func panelHeight(open: Bool) -> CGFloat {
+        guard open, let project = focusProject else { return min(railHeight, ceiling) }
+        return min(max(railHeight, cardHeight(project)), ceiling)
+    }
+
+    var tailCenter: CGFloat {
+        guard let project = focusProject,
+              let index = store.projects.firstIndex(where: { $0.id == project.id })
+        else { return Self.tileSize / 2 }
+        let height = panelHeight(open: true)
+        let railTop = (height - railHeight) / 2
+        let tile = railTop + Self.railInset
+            + CGFloat(index) * (Self.tileSize + Self.tileSpacing) + Self.tileSize / 2
+        return tile - (height - cardHeight(project)) / 2
+    }
+
+    private func pointerMoved(to point: NSPoint, in size: NSSize) {
+        guard !store.projects.isEmpty else { return }
+        guard point.x >= size.width - Self.edgeInset - Self.railWidth else { return }
+        let fromTop = (size.height + railHeight) / 2 - point.y
+        let step = Self.tileSize + Self.tileSpacing
+        let raw = Int(((fromTop - Self.railInset) / step).rounded(.down))
+        let id = store.projects[min(max(raw, 0), store.projects.count - 1)].id
+        guard focus != id else { return }
+        focus = id
+        if open { layout() }
     }
 
     private func frame(open: Bool) -> NSRect {
         let screen = panel?.screen ?? NSScreen.main
         guard let visible = screen?.visibleFrame else { return .zero }
-        let width = open ? Self.width : Self.closedWidth
-        let height = open ? openHeight : closedHeight
+        let card = open && focusProject != nil ? Self.cardWidth + Self.tailWidth : 0
+        let width = card + Self.railWidth + Self.edgeInset
+        let height = panelHeight(open: open)
         let center = visible.minY + centerFraction * visible.height
         let clamped = min(max(center, visible.minY + height / 2), visible.maxY - height / 2)
         return NSRect(x: visible.maxX - width,
@@ -214,7 +245,8 @@ final class FirstMouseHostingView<Content: View>: NSHostingView<Content> {
 /// `.activeAlways`, never SwiftUI's `onHover`: the panel is never key, and the
 /// only time the strip matters is when another application is in front.
 final class HoverView: NSView {
-    var onEnter: (() -> Void)?
+    var onEnter: ((NSPoint, NSSize) -> Void)?
+    var onMove: ((NSPoint, NSSize) -> Void)?
     var onExit: (() -> Void)?
     private var tracking: NSTrackingArea?
 
@@ -222,12 +254,18 @@ final class HoverView: NSView {
         super.updateTrackingAreas()
         if let tracking { removeTrackingArea(tracking) }
         let area = NSTrackingArea(rect: bounds,
-                                  options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+                                  options: [.mouseEnteredAndExited, .mouseMoved,
+                                            .activeAlways, .inVisibleRect],
                                   owner: self)
         addTrackingArea(area)
         tracking = area
     }
 
-    override func mouseEntered(with event: NSEvent) { onEnter?() }
+    override func mouseEntered(with event: NSEvent) { onEnter?(location(of: event), bounds.size) }
+    override func mouseMoved(with event: NSEvent) { onMove?(location(of: event), bounds.size) }
     override func mouseExited(with event: NSEvent) { onExit?() }
+
+    private func location(of event: NSEvent) -> NSPoint {
+        convert(event.locationInWindow, from: nil)
+    }
 }

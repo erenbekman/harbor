@@ -82,7 +82,7 @@ struct ProjectSidebar: View {
                 .truncationMode(.middle)
             Spacer(minLength: 4)
             if live > 0 {
-                Text("\(live)")
+                Text(verbatim: "\(live)")
                     .font(.system(size: 10, weight: .medium).monospacedDigit())
                     .foregroundStyle(Theme.muted)
                     .padding(.horizontal, 5)

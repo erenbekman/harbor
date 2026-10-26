@@ -246,7 +246,7 @@ private struct ServiceRow: View {
                 HStack(spacing: 8) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundStyle(ServiceStatus.failed(nil).color)
-                    Text(":\(conflict.port) is held by \(conflict.command) (\(conflict.pid))")
+                    Text(verbatim: ":\(conflict.port) is held by \(conflict.command) (\(conflict.pid))")
                         .font(.system(size: 12))
                     Spacer()
                     Button("Free port") { confirmFree(conflict) }
