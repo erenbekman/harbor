@@ -8,14 +8,18 @@ import SwiftUI
 /// reaches it.
 @MainActor
 final class Strip: ObservableObject {
-    /// The card floats clear of the screen edge; the WINDOW still reaches it, so
-    /// the pointer thrown at the edge opens the strip.
-    static let edgeInset: CGFloat = 10
-    static let tileSize: CGFloat = 54
-    static let tileSpacing: CGFloat = 8
-    static let railInset: CGFloat = 8
-    static let tileCorner: CGFloat = 16
-    static let railCorner: CGFloat = 22
+    static let railWidth: CGFloat = 58
+    static let flare: CGFloat = 14
+    static let innerCorner: CGFloat = 22
+    static let railInset: CGFloat = 12
+    static let ringSize: CGFloat = 38
+    static let ringWidth: CGFloat = 3
+    static let labelGap: CGFloat = 3
+    static let labelHeight: CGFloat = 11
+    static let tileSpacing: CGFloat = 14
+    static let buttonGap: CGFloat = 12
+    static let buttonSize: CGFloat = 36
+    static var tileHeight: CGFloat { ringSize + labelGap + labelHeight }
     static let cardWidth: CGFloat = 236
     static let cardCorner: CGFloat = 14
     static let tailWidth: CGFloat = 8
@@ -23,7 +27,6 @@ final class Strip: ObservableObject {
     static let cardPadding: CGFloat = 8
     static let headerHeight: CGFloat = 30
     static let serviceHeight: CGFloat = 38
-    static var railWidth: CGFloat { tileSize + railInset * 2 }
 
     @Published private(set) var installed = false
     @Published private(set) var open = false
@@ -34,11 +37,14 @@ final class Strip: ObservableObject {
         UserDefaults.standard.object(forKey: "stripCenter") as? Double ?? 0.5
 
     var onOpenProject: ((Project) -> Void)?
+    var onOpenApp: (() -> Void)?
 
     private let store: Store
     private let runner: Runner
     private var panel: StripPanel?
     private var hideTask: Task<Void, Never>?
+    private var shrinkTask: Task<Void, Never>?
+    private var heldHeight: CGFloat?
     private var watch: AnyCancellable?
 
     init(store: Store, runner: Runner) {
@@ -104,6 +110,7 @@ final class Strip: ObservableObject {
     func remove() {
         watch = nil
         hideTask?.cancel()
+        shrinkTask?.cancel()
         panel?.orderOut(nil)
         panel = nil
         open = false
@@ -113,6 +120,11 @@ final class Strip: ObservableObject {
     func openInWindow(_ project: Project) {
         setOpen(false)
         onOpenProject?(project)
+    }
+
+    func openApp() {
+        setOpen(false)
+        onOpenApp?()
     }
 
     // MARK: - Moving
@@ -153,7 +165,8 @@ final class Strip: ObservableObject {
     private func setOpen(_ value: Bool) {
         guard open != value else { return }
         open = value
-        layout()
+        if value { heldHeight = nil }
+        layout(deferShrink: !value)
     }
 
     // MARK: - Geometry
@@ -166,7 +179,11 @@ final class Strip: ObservableObject {
     /// the total before SwiftUI lays anything out.
     private var railHeight: CGFloat {
         let count = CGFloat(max(store.projects.count, 1))
-        return Self.railInset * 2 + count * Self.tileSize + (count - 1) * Self.tileSpacing
+        return Self.railInset * 2 + count * Self.tileHeight + (count - 1) * Self.tileSpacing
+    }
+
+    private var columnHeight: CGFloat {
+        railHeight + Self.flare * 2 + Self.buttonGap + Self.buttonSize
     }
 
     private func cardHeight(_ project: Project) -> CGFloat {
@@ -179,27 +196,52 @@ final class Strip: ObservableObject {
     }
 
     private func panelHeight(open: Bool) -> CGFloat {
-        guard open, let project = focusProject else { return min(railHeight, ceiling) }
-        return min(max(railHeight, cardHeight(project)), ceiling)
+        guard open, let project = focusProject else { return min(columnHeight, ceiling) }
+        let wanted = min(max(columnHeight, cardHeight(project)), ceiling)
+        return max(heldHeight ?? wanted, wanted)
+    }
+
+    private func tileCenter(_ index: Int, in height: CGFloat) -> CGFloat {
+        (height - columnHeight) / 2 + Self.flare + Self.railInset
+            + CGFloat(index) * (Self.tileHeight + Self.tileSpacing) + Self.ringSize / 2
+    }
+
+    private var focusIndex: Int? {
+        guard let project = focusProject else { return nil }
+        return store.projects.firstIndex { $0.id == project.id }
+    }
+
+    private var cardTop: CGFloat {
+        guard let index = focusIndex, let project = focusProject else { return 0 }
+        let height = panelHeight(open: true)
+        let card = cardHeight(project)
+        return min(max(tileCenter(index, in: height) - card / 2, 0), max(height - card, 0))
+    }
+
+    var cardOffset: CGFloat {
+        guard let project = focusProject else { return 0 }
+        return cardTop - (panelHeight(open: true) - cardHeight(project)) / 2
+    }
+
+    var tailAnchor: UnitPoint {
+        guard let project = focusProject else { return .trailing }
+        let height = cardHeight(project)
+        guard height > 0 else { return .trailing }
+        return UnitPoint(x: 1, y: min(max(tailCenter / height, 0), 1))
     }
 
     var tailCenter: CGFloat {
-        guard let project = focusProject,
-              let index = store.projects.firstIndex(where: { $0.id == project.id })
-        else { return Self.tileSize / 2 }
-        let height = panelHeight(open: true)
-        let railTop = (height - railHeight) / 2
-        let tile = railTop + Self.railInset
-            + CGFloat(index) * (Self.tileSize + Self.tileSpacing) + Self.tileSize / 2
-        return tile - (height - cardHeight(project)) / 2
+        guard let index = focusIndex else { return Self.ringSize / 2 }
+        return tileCenter(index, in: panelHeight(open: true)) - cardTop
     }
 
     private func pointerMoved(to point: NSPoint, in size: NSSize) {
         guard !store.projects.isEmpty else { return }
-        guard point.x >= size.width - Self.edgeInset - Self.railWidth else { return }
-        let fromTop = (size.height + railHeight) / 2 - point.y
-        let step = Self.tileSize + Self.tileSpacing
-        let raw = Int(((fromTop - Self.railInset) / step).rounded(.down))
+        guard point.x >= size.width - Self.railWidth else { return }
+        let railTop = (size.height - columnHeight) / 2 + Self.flare + Self.railInset
+        let fromTop = size.height - point.y - railTop
+        let step = Self.tileHeight + Self.tileSpacing
+        let raw = Int((fromTop / step).rounded(.down))
         let id = store.projects[min(max(raw, 0), store.projects.count - 1)].id
         guard focus != id else { return }
         focus = id
@@ -210,7 +252,7 @@ final class Strip: ObservableObject {
         let screen = panel?.screen ?? NSScreen.main
         guard let visible = screen?.visibleFrame else { return .zero }
         let card = open && focusProject != nil ? Self.cardWidth + Self.tailWidth : 0
-        let width = card + Self.railWidth + Self.edgeInset
+        let width = card + Self.railWidth
         let height = panelHeight(open: open)
         let center = visible.minY + centerFraction * visible.height
         let clamped = min(max(center, visible.minY + height / 2), visible.maxY - height / 2)
@@ -219,14 +261,23 @@ final class Strip: ObservableObject {
                       width: width, height: height)
     }
 
-    private func layout() {
+    private func layout(deferShrink: Bool = false) {
         guard let panel else { return }
+        shrinkTask?.cancel()
         let target = frame(open: open)
+        if open { heldHeight = target.height }
         guard target != panel.frame else { return }
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.16
-            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
-            panel.animator().setFrame(target, display: true)
+        let grows = target.width >= panel.frame.width && target.height >= panel.frame.height
+        guard deferShrink, !grows else {
+            panel.setFrame(target, display: true)
+            if !open { heldHeight = nil }
+            return
+        }
+        shrinkTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 240_000_000)
+            guard !Task.isCancelled, let self, let panel = self.panel else { return }
+            self.heldHeight = nil
+            panel.setFrame(self.frame(open: self.open), display: true)
         }
     }
 }

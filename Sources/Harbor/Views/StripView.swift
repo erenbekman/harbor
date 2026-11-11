@@ -17,17 +17,21 @@ struct StripView: View {
             if strip.open, let project = focused {
                 card(project)
                     .frame(width: Strip.cardWidth + Strip.tailWidth)
-                    .transition(.opacity.combined(with: .move(edge: .trailing)))
+                    .offset(y: strip.cardOffset)
+                    .transition(.scale(scale: 0.88, anchor: strip.tailAnchor)
+                        .combined(with: .opacity))
             }
-            rail
+            VStack(spacing: Strip.buttonGap) {
+                rail
+                appButton
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
-        .padding(.trailing, Strip.edgeInset)
         .animation(reduceMotion ? .linear(duration: 0.12)
-                                : .spring(response: 0.3, dampingFraction: 0.85),
+                                : .spring(response: 0.26, dampingFraction: 0.88),
                    value: strip.open)
         .animation(reduceMotion ? .linear(duration: 0.1)
-                                : .spring(response: 0.25, dampingFraction: 0.9),
+                                : .spring(response: 0.3, dampingFraction: 0.86),
                    value: strip.focus)
     }
 
@@ -41,65 +45,89 @@ struct StripView: View {
                 ForEach(store.projects) { tile($0) }
             }
         }
-        .padding(Strip.railInset)
-        .background(railBackground)
+        .padding(.vertical, Strip.railInset)
+        .frame(width: Strip.railWidth)
+        .padding(.vertical, Strip.flare)
+        .background(
+            EdgePanel(flare: Strip.flare, corner: Strip.innerCorner)
+                .fill(Theme.shell)
+                .shadow(color: .black.opacity(0.3), radius: 12, x: -3, y: 0)
+        )
         .contentShape(Rectangle())
         .simultaneousGesture(dragGesture)
     }
 
-    private var railBackground: some View {
-        let shape = RoundedRectangle(cornerRadius: Strip.railCorner, style: .continuous)
-        return shape
-            .fill(Theme.raised.opacity(0.9))
-            .overlay(shape.strokeBorder(Color.white.opacity(0.09), lineWidth: 1))
-            .shadow(color: .black.opacity(0.35), radius: 14, x: -2, y: 6)
-    }
-
     private func tile(_ project: Project) -> some View {
         let live = running(project)
-        let lit = live > 0
+        let total = project.services.count
         let selected = strip.open && focused?.id == project.id
-        let shape = RoundedRectangle(cornerRadius: Strip.tileCorner, style: .continuous)
-        return VStack(spacing: 5) {
-            Text(project.badge)
-                .font(.system(size: 17, weight: .semibold, design: .rounded))
-                .foregroundStyle(lit ? Color.white : Theme.muted)
-            HStack(spacing: 3) {
-                ForEach(project.services.prefix(5)) { service in
-                    Circle()
-                        .fill(dot(runner.status(of: service), onAccent: lit))
-                        .frame(width: 4, height: 4)
-                }
+        return VStack(spacing: Strip.labelGap) {
+            ZStack {
+                Circle().fill(Color.white.opacity(selected ? 0.13 : 0.06))
+                Circle().stroke(Color.white.opacity(0.1), lineWidth: Strip.ringWidth)
+                Circle()
+                    .trim(from: 0, to: progress(project))
+                    .stroke(ring(project),
+                            style: StrokeStyle(lineWidth: Strip.ringWidth, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                Text(project.badge)
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundStyle(live > 0 ? Color.white : Theme.muted)
             }
-            .frame(height: 4)
+            .frame(width: Strip.ringSize, height: Strip.ringSize)
+            .scaleEffect(selected ? 1.06 : 1)
+            Text(total == 0 ? "—" : "\(live)/\(total)")
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(Color.white.opacity(selected ? 0.75 : 0.5))
+                .frame(height: Strip.labelHeight)
         }
-        .frame(width: Strip.tileSize, height: Strip.tileSize)
-        .background(shape.fill(lit ? Theme.accent : Color.white.opacity(0.07)))
-        .overlay(shape.strokeBorder(selected ? Color.white.opacity(0.55)
-                                             : Color.white.opacity(0.08),
-                                    lineWidth: 1))
-        .scaleEffect(selected ? 1.06 : 1)
-        .contentShape(shape)
+        .contentShape(Rectangle())
         .onTapGesture { strip.openInWindow(project) }
         .help("\(project.name) — click to open in Harbor")
     }
 
     private var emptyTile: some View {
-        RoundedRectangle(cornerRadius: Strip.tileCorner, style: .continuous)
-            .fill(Color.white.opacity(0.05))
-            .frame(width: Strip.tileSize, height: Strip.tileSize)
-            .overlay(Image(nsImage: Mark.image(size: 20, filled: false)).foregroundStyle(Theme.faint))
-            .help("No projects yet")
+        ZStack {
+            Circle().fill(Color.white.opacity(0.06))
+            Image(nsImage: Mark.image(size: 18, filled: false)).foregroundStyle(Theme.faint)
+        }
+        .frame(width: Strip.ringSize, height: Strip.ringSize)
+        .frame(height: Strip.tileHeight)
+        .help("No projects yet")
     }
 
-    private func dot(_ status: ServiceStatus, onAccent: Bool) -> Color {
-        guard onAccent else { return status.color }
-        switch status {
-        case .running: return .white
-        case .starting: return .white.opacity(0.7)
-        case .failed: return Color(nsColor: .systemRed)
-        case .stopped: return .white.opacity(0.3)
+    private var appButton: some View {
+        Circle()
+            .fill(Theme.shell)
+            .frame(width: Strip.buttonSize, height: Strip.buttonSize)
+            .overlay(
+                Image(systemName: "square.grid.2x2.fill")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.white.opacity(0.7))
+            )
+            .shadow(color: .black.opacity(0.3), radius: 10, x: -2, y: 2)
+            .frame(width: Strip.railWidth)
+            .contentShape(Circle())
+            .onTapGesture { strip.openApp() }
+            .help("Open Harbor")
+    }
+
+    private func progress(_ project: Project) -> CGFloat {
+        guard !project.services.isEmpty else { return 0 }
+        if project.services.contains(where: { if case .failed = runner.status(of: $0) { return true } else { return false } }) {
+            return 1
         }
+        return CGFloat(running(project)) / CGFloat(project.services.count)
+    }
+
+    private func ring(_ project: Project) -> Color {
+        if project.services.contains(where: { if case .failed = runner.status(of: $0) { return true } else { return false } }) {
+            return Color(nsColor: .systemRed)
+        }
+        if project.services.contains(where: { runner.status(of: $0) == .starting }) {
+            return Color(nsColor: .systemOrange)
+        }
+        return running(project) > 0 ? Color(nsColor: .systemGreen) : Color.white.opacity(0.2)
     }
 
     // MARK: - Card
@@ -227,6 +255,33 @@ struct StripView: View {
 
     private func running(_ project: Project) -> Int {
         project.services.filter { runner.status(of: $0).isLive }.count
+    }
+}
+
+private struct EdgePanel: Shape {
+    var flare: CGFloat
+    var corner: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        let body = CGRect(x: rect.minX, y: rect.minY + flare,
+                          width: rect.width, height: max(rect.height - flare * 2, 1))
+        let r = min(corner, body.height / 2)
+        var path = Path()
+        path.move(to: CGPoint(x: body.minX + r, y: body.minY))
+        path.addLine(to: CGPoint(x: body.maxX - flare, y: body.minY))
+        path.addArc(center: CGPoint(x: body.maxX - flare, y: body.minY - flare),
+                    radius: flare, startAngle: .degrees(90), endAngle: .degrees(0), clockwise: true)
+        path.addLine(to: CGPoint(x: body.maxX, y: body.maxY + flare))
+        path.addArc(center: CGPoint(x: body.maxX - flare, y: body.maxY + flare),
+                    radius: flare, startAngle: .degrees(0), endAngle: .degrees(-90), clockwise: true)
+        path.addLine(to: CGPoint(x: body.minX + r, y: body.maxY))
+        path.addArc(tangent1End: CGPoint(x: body.minX, y: body.maxY),
+                    tangent2End: CGPoint(x: body.minX, y: body.maxY - r), radius: r)
+        path.addLine(to: CGPoint(x: body.minX, y: body.minY + r))
+        path.addArc(tangent1End: CGPoint(x: body.minX, y: body.minY),
+                    tangent2End: CGPoint(x: body.minX + r, y: body.minY), radius: r)
+        path.closeSubpath()
+        return path
     }
 }
 

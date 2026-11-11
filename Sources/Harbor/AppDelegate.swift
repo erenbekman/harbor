@@ -31,6 +31,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
             self?.store.selection = project.id
             self?.showWindow(nil)
         }
+        strip.onOpenApp = { [weak self] in self?.showWindow(nil) }
         if Strip.isEnabled { strip.install() }
     }
 
